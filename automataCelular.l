@@ -9,13 +9,14 @@
 %%
 
 [0-9]+       { yylval.ival = atoi(yytext); return NUMERO; }
-[a-z]+    { strcpy(yylval.strval, yytext); return COLOR; }
+"vecindad" { return VECINDAD; }
 "crear automata simetrico" { return CREARAUTOMATA; }
-"tipo vecindad" { return TIPOVECINDAD; }
 "S"          { return S; }
 "E"          { return E; }
 "I"          { return I; }
 "R"          { return R; }
+[a-z]+    { strcpy(yylval.strval, yytext); return COLOR; }
+
 \n           { return ENDLINE; }
 
 %%

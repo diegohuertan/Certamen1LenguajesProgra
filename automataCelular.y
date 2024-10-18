@@ -28,9 +28,11 @@ typedef struct automataCelular {
 
 automataCelular* crearAutomataSimetrico(char* color, int filas, int columnas, seir estado);
 seir crearSeir(int s, int e, int i, int r);
+void imprimirAutomata(automataCelular* automata);
+void imprimirVecindad(int vecindad[8][2]);
+void obtenerVecindadMoore(automataCelular* automata, int i, int j, int vecindad[8][2]);
 
 automataCelular* automata;
-void imprimirAutomata(automataCelular* automata);
 
 %}
 
@@ -41,7 +43,7 @@ void imprimirAutomata(automataCelular* automata);
 
 /* token detection rules (re) */
 
-%token<strval> CREARAUTOMATA TIPOVECINDAD DEFAULT S E I R COLOR
+%token<strval> CREARAUTOMATA DEFAULT S E I R COLOR VECINDAD
 %token<ival> NUMERO
 %token ENDLINE
 
@@ -62,10 +64,16 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO S NUMERO E NUMERO I NUMERO R NUMERO {
         seir estado = crearSeir($6, $8, $10, $12);
         automata = crearAutomataSimetrico($2, $3, $4, estado);
         imprimirAutomata(automata);
-        }
-        ;
+    }
+    |
+    VECINDAD NUMERO NUMERO {
+        int vecindad[8][2];
+        obtenerVecindadMoore(automata, $2 ,$3, vecindad);
+        imprimirVecindad(vecindad);
+    }
+    ;
 endline: ENDLINE
-        ;
+    ;
 
 %%
 
@@ -93,6 +101,36 @@ seir crearSeir(int s, int e, int i, int r) {
     estado.estados[2] = i;
     estado.estados[3] = r;
     return estado;
+}
+
+void obtenerVecindadMoore(automataCelular* automata, int i, int j, int vecindad[8][2]) {
+    // Definir desplazamientos de Moore
+    int dx[] = {-1, -1, -1, 0, 0, 1, 1, 1};
+    int dy[] = {-1, 0, 1, -1, 1, -1, 0, 1};
+    int k = 0;
+
+    // Iterar sobre los 8 vecinos
+    for (int d = 0; d < 8; d++) {
+        int ni = i + dx[d]; // Nueva fila
+        int nj = j + dy[d]; // Nueva columna
+
+        // Verificar si está dentro de los límites del autómata
+        if (ni >= 0 && ni < automata->filas && nj >= 0 && nj < automata->columnas) {
+            vecindad[k][0] = ni;
+            vecindad[k][1] = nj;
+        } else {
+            // Si el vecino está fuera de los límites, poner -1 para indicar que no es válido
+            vecindad[k][0] = -1;
+            vecindad[k][1] = -1;
+        }
+        k++;
+    }
+}
+
+void imprimirVecindad(int vecindad[8][2]) {
+    for (int k = 0; k < 8; k++) {
+        printf("Vecino %d: (%d, %d)\n", k, vecindad[k][0], vecindad[k][1]);
+    }
 }
 
 void imprimirAutomata(automataCelular* automata) {
