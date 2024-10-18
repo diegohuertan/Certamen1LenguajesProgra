@@ -11,6 +11,7 @@
 [0-9]+       { yylval.ival = atoi(yytext); return NUMERO; }
 "vecindad" { return VECINDAD; }
 "crear automata simetrico" { return CREARAUTOMATA; }
+"simular"   { return SIMULAR; }
 "S"          { return S; }
 "E"          { return E; }
 "I"          { return I; }
