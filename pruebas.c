@@ -1,38 +1,75 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
+#include <stdbool.h>
 
 typedef struct {
     double S;
     double E;
     double I;
     double R;
-} Celda;
+} seir;
+
+typedef struct {
+    seir estado;
+} celula;
+
+typedef struct {
+    char color[50];
+    celula **celulas;
+    int filas;
+    int columnas;
+} automataCelular;
 
 #define FILAS 5
 #define COLUMNAS 5
 
-void distribuir_infectados_aleatorio(Celda matriz[FILAS][COLUMNAS], int num_infectados) {
+void inicializar_automata(automataCelular *automata, int filas, int columnas, const char *color) {
+    automata->filas = filas;
+    automata->columnas = columnas;
+    strcpy(automata->color, color);
+
+    automata->celulas = (celula **)malloc(filas * sizeof(celula *));
+    for (int i = 0; i < filas; i++) {
+        automata->celulas[i] = (celula *)malloc(columnas * sizeof(celula));
+        for (int j = 0; j < columnas; j++) {
+            automata->celulas[i][j].estado.S = 100.0;
+            automata->celulas[i][j].estado.E = 0.0;
+            automata->celulas[i][j].estado.I = 0.0;
+            automata->celulas[i][j].estado.R = 0.0;
+        }
+    }
+}
+
+void liberar_automata(automataCelular *automata) {
+    for (int i = 0; i < automata->filas; i++) {
+        free(automata->celulas[i]);
+    }
+    free(automata->celulas);
+}
+
+void distribuir_infectados_aleatorio(automataCelular *automata, int num_infectados) {
     int infectados_colocados = 0;
 
     while (infectados_colocados < num_infectados) {
-        int fila = rand() % FILAS;
-        int columna = rand() % COLUMNAS;
+        int fila = rand() % automata->filas;
+        int columna = rand() % automata->columnas;
 
-        if (matriz[fila][columna].I == 0 && matriz[fila][columna].S >= 5.0) {
-            matriz[fila][columna].S -= 5.0;
-            matriz[fila][columna].I = 5.0;
+        if (automata->celulas[fila][columna].estado.I == 0 && automata->celulas[fila][columna].estado.S >= 5.0) {
+            automata->celulas[fila][columna].estado.S -= 5.0;
+            automata->celulas[fila][columna].estado.I = 5.0;
             infectados_colocados++;
         }
     }
 }
 
-void actualizar_celda_con_vecinos(Celda matriz[FILAS][COLUMNAS], int fila, int columna, double beta, double sigma, double gamma, double dt) {
-    Celda *celda = &matriz[fila][columna];
-    double S = celda->S;
-    double E = celda->E;
-    double I = celda->I;
-    double R = celda->R;
+void actualizar_celda_con_vecinos(automataCelular *automata, int fila, int columna, double beta, double sigma, double gamma, double dt) {
+    celula *celda = &automata->celulas[fila][columna];
+    double S = celda->estado.S;
+    double E = celda->estado.E;
+    double I = celda->estado.I;
+    double R = celda->estado.R;
 
     double I_vecinos = 0;
     int vecinos_contados = 0;
@@ -44,8 +81,8 @@ void actualizar_celda_con_vecinos(Celda matriz[FILAS][COLUMNAS], int fila, int c
             int fila_vecino = fila + i;
             int columna_vecino = columna + j;
 
-            if (fila_vecino >= 0 && fila_vecino < FILAS && columna_vecino >= 0 && columna_vecino < COLUMNAS) {
-                I_vecinos += matriz[fila_vecino][columna_vecino].I;
+            if (fila_vecino >= 0 && fila_vecino < automata->filas && columna_vecino >= 0 && columna_vecino < automata->columnas) {
+                I_vecinos += automata->celulas[fila_vecino][columna_vecino].estado.I;
                 vecinos_contados++;
             }
         }
@@ -60,39 +97,77 @@ void actualizar_celda_con_vecinos(Celda matriz[FILAS][COLUMNAS], int fila, int c
     double dI = (sigma * E - gamma * I) * dt;
     double dR = gamma * I * dt;
 
-    celda->S += dS;
-    celda->E += dE;
-    celda->I += dI;
-    celda->R += dR;
+    celda->estado.S += dS;
+    celda->estado.E += dE;
+    celda->estado.I += dI;
+    celda->estado.R += dR;
 
-    if (celda->S < 0) celda->S = 0;
-    if (celda->E < 0) celda->E = 0;
-    if (celda->I < 0) celda->I = 0;
-    if (celda->R < 0) celda->R = 0;
+    if (celda->estado.S < 0) celda->estado.S = 0;
+    if (celda->estado.E < 0) celda->estado.E = 0;
+    if (celda->estado.I < 0) celda->estado.I = 0;
+    if (celda->estado.R < 0) celda->estado.R = 0;
 
     if (E > 0) {
-        celda->I += (sigma * E * dt);
-        celda->E -= (sigma * E * dt);
+        celda->estado.I += (sigma * E * dt);
+        celda->estado.E -= (sigma * E * dt);
     }
 
     if (I > 0) {
-        celda->R += (gamma * I * dt);
-        celda->I -= (gamma * I * dt);
+        celda->estado.R += (gamma * I * dt);
+        celda->estado.I -= (gamma * I * dt);
     }
 }
 
-void imprimir_matriz_estados(Celda matriz[FILAS][COLUMNAS]) {
-    for (int i = 0; i < FILAS; i++) {
-        for (int j = 0; j < COLUMNAS; j++) {
+void actualizar_conexion_matrices(automataCelular *automata1, automataCelular *automata2, double beta, double sigma, double gamma, double dt) {
+    int hay_infectados = 0;
+
+    // Verificar si hay infectados en la última fila de automata1
+    for (int j = 0; j < automata1->columnas; j++) {
+        if (automata1->celulas[automata1->filas - 1][j].estado.I > 0) {
+            hay_infectados = 1;
+            break;
+        }
+    }
+
+    // Si hay infectados en la última fila de automata1, actualizar la primera fila de automata2
+    if (hay_infectados) {
+        for (int j = 0; j < automata2->columnas; j++) {
+            double I_vecinos = automata1->celulas[automata1->filas - 1][j].estado.I;
+            double S = automata2->celulas[0][j].estado.S;
+            double E = automata2->celulas[0][j].estado.E;
+            double I = automata2->celulas[0][j].estado.I;
+            double R = automata2->celulas[0][j].estado.R;
+
+            double dS = -beta * S * I_vecinos * dt;
+            double dE = (beta * S * I_vecinos - sigma * E) * dt;
+            double dI = (sigma * E - gamma * I) * dt;
+            double dR = gamma * I * dt;
+
+            automata2->celulas[0][j].estado.S += dS;
+            automata2->celulas[0][j].estado.E += dE;
+            automata2->celulas[0][j].estado.I += dI;
+            automata2->celulas[0][j].estado.R += dR;
+
+            if (automata2->celulas[0][j].estado.S < 0) automata2->celulas[0][j].estado.S = 0;
+            if (automata2->celulas[0][j].estado.E < 0) automata2->celulas[0][j].estado.E = 0;
+            if (automata2->celulas[0][j].estado.I < 0) automata2->celulas[0][j].estado.I = 0;
+            if (automata2->celulas[0][j].estado.R < 0) automata2->celulas[0][j].estado.R = 0;
+        }
+    }
+}
+
+void imprimir_matriz_estados(automataCelular *automata) {
+    for (int i = 0; i < automata->filas; i++) {
+        for (int j = 0; j < automata->columnas; j++) {
             char estado = 'S';
 
-            if (matriz[i][j].E > 0) {
+            if (automata->celulas[i][j].estado.E > 0) {
                 estado = 'E';
             }
-            if (matriz[i][j].I > 0) {
+            if (automata->celulas[i][j].estado.I > 0) {
                 estado = 'I';
             }
-            if (matriz[i][j].R > 0) {
+            if (automata->celulas[i][j].estado.R > 0) {
                 estado = 'R';
             }
 
@@ -103,6 +178,78 @@ void imprimir_matriz_estados(Celda matriz[FILAS][COLUMNAS]) {
     printf("\n");
 }
 
+void imprimir_matrices_juntas(automataCelular *automata1, automataCelular *automata2) {
+    for (int i = 0; i < automata1->filas; i++) {
+        for (int j = 0; j < automata1->columnas; j++) {
+            char estado = 'S';
+
+            if (automata1->celulas[i][j].estado.E > 0) {
+                estado = 'E';
+            }
+            if (automata1->celulas[i][j].estado.I > 0) {
+                estado = 'I';
+            }
+            if (automata1->celulas[i][j].estado.R > 0) {
+                estado = 'R';
+            }
+
+            printf("%c ", estado);
+        }
+        printf("   ");
+        for (int j = 0; j < automata2->columnas; j++) {
+            char estado = 'S';
+
+            if (automata2->celulas[i][j].estado.E > 0) {
+                estado = 'E';
+            }
+            if (automata2->celulas[i][j].estado.I > 0) {
+                estado = 'I';
+            }
+            if (automata2->celulas[i][j].estado.R > 0) {
+                estado = 'R';
+            }
+
+            printf("%c ", estado);
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void inicializar_simulacion(automataCelular *automata1, automataCelular *automata2) {
+    inicializar_automata(automata1, FILAS, COLUMNAS, "Rojo");
+    inicializar_automata(automata2, FILAS, COLUMNAS, "Verde");
+
+    distribuir_infectados_aleatorio(automata1, 2);
+    distribuir_infectados_aleatorio(automata2, 0);
+}
+
+void simular_dia(automataCelular *automata1, automataCelular *automata2, double beta, double sigma, double gamma, double dt) {
+    for (int i = 0; i < automata1->filas; i++) {
+        for (int j = 0; j < automata1->columnas; j++) {
+            actualizar_celda_con_vecinos(automata1, i, j, beta, sigma, gamma, dt);
+            actualizar_celda_con_vecinos(automata2, i, j, beta, sigma, gamma, dt);
+        }
+    }
+
+    // Actualizar conexión entre matrices
+    actualizar_conexion_matrices(automata1, automata2, beta, sigma, gamma, dt);
+}
+
+void imprimir_estado_dia(automataCelular *automata1, automataCelular *automata2, int dia, bool imprimir_juntas) {
+    printf("Día %d:\n", dia);
+    if (imprimir_juntas) {
+        // Imprimir ambas matrices juntas
+        imprimir_matrices_juntas(automata1, automata2);
+    } else {
+        // Imprimir matrices por separado
+        printf("Automata 1:\n");
+        imprimir_matriz_estados(automata1);
+        printf("Automata 2:\n");
+        imprimir_matriz_estados(automata2);
+    }
+}
+
 int main() {
     srand(time(NULL));
 
@@ -111,32 +258,20 @@ int main() {
     double gamma = 1.0 / 15.0;
     double dt = 1.0;
 
-    Celda matriz[FILAS][COLUMNAS];
+    automataCelular automata1;
+    automataCelular automata2;
 
-    for (int i = 0; i < FILAS; i++) {
-        for (int j = 0; j < COLUMNAS; j++) {
-            matriz[i][j].S = 100.0;
-            matriz[i][j].E = 0.0;
-            matriz[i][j].I = 0.0;
-            matriz[i][j].R = 0.0;
-        }
-    }
+    inicializar_simulacion(&automata1, &automata2);
 
-    distribuir_infectados_aleatorio(matriz, 5);
-
-    printf("Día 1:\n");
-    imprimir_matriz_estados(matriz);
+    imprimir_estado_dia(&automata1, &automata2, 1, true);
 
     for (int t = 1; t < 10; t++) {
-        for (int i = 0; i < FILAS; i++) {
-            for (int j = 0; j < COLUMNAS; j++) {
-                actualizar_celda_con_vecinos(matriz, i, j, beta, sigma, gamma, dt);
-            }
-        }
-
-        printf("Día %d:\n", t + 1);
-        imprimir_matriz_estados(matriz);
+        simular_dia(&automata1, &automata2, beta, sigma, gamma, dt);
+        imprimir_estado_dia(&automata1, &automata2, t + 1, false);
     }
+
+    liberar_automata(&automata1);
+    liberar_automata(&automata2);
 
     return 0;
 }
