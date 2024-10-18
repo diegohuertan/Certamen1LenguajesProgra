@@ -272,6 +272,7 @@ int main() {
 
     liberar_automata(&automata1);
     liberar_automata(&automata2);
+    
 
     return 0;
 }
