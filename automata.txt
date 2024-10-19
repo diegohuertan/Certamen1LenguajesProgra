@@ -1,0 +1,2 @@
+crear automata simetrico rojo 2 2 s98 e1 i1 r0 s90 e5 i5 r0 s80 e10 i5 r0 s98 e1 i1 r0
+

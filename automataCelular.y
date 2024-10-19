@@ -1,63 +1,32 @@
-/* Declarations-definitions */
-
 %{
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <limits.h>
-#include <stdbool.h>
+#include "automataCelular.h"
 extern FILE *yyin;
-
 
 // Declaración de constantes globales
 const double BETA = 0.3;   // Tasa de infección
 const double SIGMA = 0.5;  // Tasa de morbilidad (E -> I)
 const double GAMMA = 1.0 / 3.0; // Tasa de recuperación (7 días)
-const double DT = 0.5;      // Paso de tiempo
+const double DT = 0.7;      // Paso de tiempo
 const int POBLACION_MAXIMA = 100;
 
-
+// Declaraciones de funciones
 int yylex();
 void yyerror(const char*);
-
-typedef struct seir {
-    int estados[4];
-} seir;
-
-typedef struct celula {
-    seir estado;
-} celula;
-
-typedef struct automataCelular {
-    char color[50];
-    celula **celulas;
-    int filas;
-    int columnas;
-} automataCelular;
-
-
-
-automataCelular* crearAutomataSimetrico(char* color, int filas, int columnas, seir estado);
-seir crearSeir(int s, int e, int i, int r);
-void imprimirAutomata(automataCelular* automata);
-void imprimirVecindad(int vecindad[8][2]);
-void obtenerVecindadMoore(automataCelular* automata, int i, int j, int vecindad[8][2]);
-void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int columna);
-
-
 automataCelular* automata;
-
+seir* convertirSubarraysASeir(int** subarrays, int length); // Declaración de la función
 %}
 
 %union {
     int ival;
-    char strval[50];
+    char* strval;
+    int** subarraylist;  // Para almacenar una lista de subarrays
 }
 
-/* token detection rules (re) */
-
+/* Definiciones de tokens */
+%type <subarraylist> celulas
 %token<strval> CREARAUTOMATA DEFAULT S E I R COLOR VECINDAD SIMULAR
 %token<ival> NUMERO
+%token<subarraylist> ESTADOSSEIR
 %token ENDLINE
 
 /* Sintax detection rules (re) */
@@ -66,16 +35,16 @@ automataCelular* automata;
 instrucciones:
     instrucciones instruccion
     | instruccion
-    ;
+;
 
 instruccion:
-    funcion endline
-    | endline
+    funcion ENDLINE
+    | ENDLINE
     ;
 
-funcion: CREARAUTOMATA COLOR NUMERO NUMERO S NUMERO E NUMERO I NUMERO R NUMERO {
-        seir estado = crearSeir($6, $8, $10, $12);
-        automata = crearAutomataSimetrico($2, $3, $4, estado);
+funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
+        seir* listaseir = convertirSubarraysASeir($5, $3 * $4);  // Cambiar seir** a seir*
+        automata = crearAutomataSimetrico($2, $3, $4, listaseir); // Cambiar listaseir2 a listaseir
         imprimirAutomata(automata);
     }
     |
@@ -95,23 +64,43 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO S NUMERO E NUMERO I NUMERO R NUMERO {
         imprimirAutomata(automata);
     }
     ;
-endline: ENDLINE
+celulas:
+    ESTADOSSEIR {
+        $$ = $1;  // Asigna el valor del subarray a $$ para que esté disponible
+        printf("ESTADOSSEIR:\n");
+        for (int i = 0; i < 2 * 2; i++) {
+            printf("(%d, %d, %d, %d)\n", $1[i][0], $1[i][1], $1[i][2], $1[i][3]);
+        }
+    }
+    | ENDLINE {
+        $$ = NULL;  // También asigna NULL en este caso para el retorno
+    }
     ;
 
 %%
 
-automataCelular* crearAutomataSimetrico(char* color, int filas, int columnas, seir estado) {
+seir* convertirSubarraysASeir(int** subarrays, int length) {
+    seir* listaseir = (seir*)malloc(length * sizeof(seir));
+    for (int i = 0; i < length; i++) {
+        listaseir[i] = crearSeir(subarrays[i][0], subarrays[i][1], subarrays[i][2], subarrays[i][3]);
+    }
+    return listaseir;
+}
+
+automataCelular* crearAutomataSimetrico(char* color, int filas, int columnas, seir* estados) { // Cambiar seir** a seir*
     automataCelular* automata = (automataCelular*)malloc(sizeof(automataCelular));
     strcpy(automata->color, color);
     automata->filas = filas;
     automata->columnas = columnas;
     automata->celulas = (celula**)malloc(filas * sizeof(celula*));
+    
+    int estado_index = 0;
+    
     for (int i = 0; i < filas; i++) {
         automata->celulas[i] = (celula*)malloc(columnas * sizeof(celula));
-    }
-    for (int i = 0; i < filas; i++) {
         for (int j = 0; j < columnas; j++) {
-            automata->celulas[i][j].estado = estado;
+            // Asigna un estado de la lista a cada celda
+            automata->celulas[i][j].estado = estados[estado_index++];
         }
     }
     return automata;
@@ -170,6 +159,7 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
     double E = celda->estado.estados[1];
     double I = celda->estado.estados[2];
     double R = celda->estado.estados[3];
+    double poblacion_maxima = POBLACION_MAXIMA;
 
     // Acumular infectados de los vecinos (Vecindad de Moore)
     double I_vecinos = 0;
@@ -187,20 +177,20 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
     }
 
     if (vecinos_contados > 0) {
-        I_vecinos /= vecinos_contados; // Promedio de infectados en vecinos
+        I_vecinos /= vecinos_contados;
     }
 
     // Cálculo de los cambios
-    double dS = -BETA * S * I_vecinos * DT; // Cambio en susceptibles
-    double dE = (BETA * S * I_vecinos - SIGMA * E) * DT; // Cambio en expuestos
-    double dI = (SIGMA * E - GAMMA * I) * DT; // Cambio en infectados
-    double dR = GAMMA * I * DT; // Cambio en recuperados
+    double dS = -BETA * S * I_vecinos * DT;
+    double dE = (BETA * S * I_vecinos - SIGMA * E) * DT;
+    double dI = (SIGMA * E - GAMMA * I) * DT;
+    double dR = GAMMA * I * DT;
 
     // Actualizar los valores de la celda
-    celda->estado.estados[0] += dS; // Actualizar susceptibles
-    celda->estado.estados[1] += dE; // Actualizar expuestos
-    celda->estado.estados[2] += dI; // Actualizar infectados
-    celda->estado.estados[3] += dR; // Actualizar recuperados
+    celda->estado.estados[0] += dS;
+    celda->estado.estados[1] += dE;
+    celda->estado.estados[2] += dI;
+    celda->estado.estados[3] += dR;
 
     // Asegurarse de que no haya valores negativos
     if (celda->estado.estados[0] < 0) celda->estado.estados[0] = 0;
@@ -208,36 +198,16 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
     if (celda->estado.estados[2] < 0) celda->estado.estados[2] = 0;
     if (celda->estado.estados[3] < 0) celda->estado.estados[3] = 0;
 
-    // Asegurarse de que los individuos se muevan entre los estados
-    // Infectar individuos expuestos
-    if (E > 0) {
-        double nuevos_infectados = (SIGMA * E * DT);
-        celda->estado.estados[2] += nuevos_infectados; // Incrementar infectados
-        celda->estado.estados[1] -= nuevos_infectados; // Disminuir expuestos
-    }
-
-    // Recuperar individuos infectados
-    if (I > 0) {
-        double nuevos_recuperados = (GAMMA * I * DT);
-        celda->estado.estados[3] += nuevos_recuperados; // Incrementar recuperados
-        celda->estado.estados[2] -= nuevos_recuperados; // Disminuir infectados
-    }
-
-    // Asegurarse de que la población total no exceda el máximo permitido
+    // Asegurarse de que la población total no exceda la población máxima
     double total_poblacion = celda->estado.estados[0] + celda->estado.estados[1] + celda->estado.estados[2] + celda->estado.estados[3];
-
-    if (total_poblacion > POBLACION_MAXIMA) {
-        // Ajustar proporcionalmente los valores para que no excedan el máximo
-        double factor = POBLACION_MAXIMA / total_poblacion;
-
-        celda->estado.estados[0] *= factor;  // Ajustar susceptibles
-        celda->estado.estados[1] *= factor;  // Ajustar expuestos
-        celda->estado.estados[2] *= factor;  // Ajustar infectados
-        celda->estado.estados[3] *= factor;  // Ajustar recuperados
+    if (total_poblacion > poblacion_maxima) {
+        double factor = poblacion_maxima / total_poblacion;
+        celda->estado.estados[0] *= factor;
+        celda->estado.estados[1] *= factor;
+        celda->estado.estados[2] *= factor;
+        celda->estado.estados[3] *= factor;
     }
 }
-
-
 
 void yyerror(const char* msg) {
     printf("error: %s\n", msg);
@@ -245,7 +215,7 @@ void yyerror(const char* msg) {
 
 int main(int argc, char **argv) {
     // Intentar abrir el archivo de comandos predeterminado
-    yyin = fopen("universo.txt", "r");
+    yyin = fopen("automata.txt", "r");
     if (yyin) {
         yyparse();
         fclose(yyin);  // Cierra el archivo después de procesarlo
