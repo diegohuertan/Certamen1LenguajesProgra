@@ -2,6 +2,7 @@
 #include "automataCelular.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <string.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -9,10 +10,9 @@ extern FILE *yyin;
 
 
 // Declaración de constantes globales
-const double BETA = 0.7;   // Tasa de infección
-const double SIGMA = 0.8;  // Tasa de morbilidad (E -> I)
-const double GAMMA = 1.0 / 2.0; // Tasa de recuperación (7 días)
-const double DT = 0.9;      // Paso de tiempo
+const double PROB_INFECCION = 0.8;   // Probabilidad de infección
+const double PROB_MORBILIDAD = 0.8;  // Probabilidad de morbilidad (E -> I)
+const double PROB_RECUPERACION = 0.8; // Probabilidad de recuperación (I -> R)
 const int POBLACION_MAXIMA = 100;
 
 // Declaraciones de funciones
@@ -20,6 +20,8 @@ int yylex();
 void yyerror(const char*);
 automataCelular* automata;
 seir* convertirSubarraysASeir(int** subarrays, int length); // Declaración de la función
+listaAutomatas* listaAutomatasGlobal;
+automataAsimetrico* automataAsimetricoGlobal;
 %}
 
 %union {
@@ -30,7 +32,7 @@ seir* convertirSubarraysASeir(int** subarrays, int length); // Declaración de l
 
 /* Definiciones de tokens */
 %type <subarraylist> celulas
-%token<strval> CREARAUTOMATA DEFAULT S E I R COLOR VECINDAD SIMULAR
+%token<strval> CREARAUTOMATA DEFAULT S E I R COLOR VECINDAD SIMULAR ASIMETRICO ASIGNAR
 %token<ival> NUMERO
 %token<subarraylist> ESTADOSSEIR
 %token ENDLINE
@@ -49,8 +51,9 @@ instruccion:
     ;
 
 funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
-        seir* listaseir = convertirSubarraysASeir($5, $3 * $4);  // Cambiar seir** a seir*
-        automata = crearAutomataSimetrico($2, $3, $4, listaseir); // Cambiar listaseir2 a listaseir
+        seir* listaseir = convertirSubarraysASeir($5, $3 * $4);
+        automataCelular* automata = crearAutomataSimetrico($2, $3, $4, listaseir);
+        agregarAutomata(listaAutomatasGlobal, automata);
         imprimirAutomata(automata);
     }
     |
@@ -61,13 +64,32 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
     }
     |
     SIMULAR {
-        // Simular el autómata celular
+        for (int sim = 0; sim < 6; sim++) {
+            printf("Simulación %d:\n", sim);
+        for (int iter = 0; iter < 20; iter++) {
         for (int i = 0; i < automata->filas; i++) {
             for (int j = 0; j < automata->columnas; j++) {
                 actualizar_celda_con_vecinos(automata, i, j);
             }
         }
+        }
         imprimirAutomata(automata);
+    }
+    }
+    |
+    ASIMETRICO NUMERO NUMERO {
+        automataAsimetricoGlobal = crearAutomataAsimetrico($2, $3);
+        imprimirAutomataAsimetrico(automataAsimetricoGlobal);
+    }
+    |
+    ASIGNAR NUMERO NUMERO NUMERO {
+        if ($4 < listaAutomatasGlobal->cantidad) {
+            automataCelular* simetrico = listaAutomatasGlobal->automatas[$4];
+            asignarAutomataSimetrico(automataAsimetricoGlobal, $2, $3, simetrico);
+            imprimirAutomataAsimetrico(automataAsimetricoGlobal);
+        } else {
+            fprintf(stderr, "Error: índice de autómata simétrico fuera de rango.\n");
+        }
     }
     ;
 celulas:
@@ -152,13 +174,31 @@ void imprimirVecindad(int vecindad[8][2]) {
 }
 
 void imprimirAutomata(automataCelular* automata) {
+    printf("Automata: %s\n",automata->color);
+
+    // Imprimir encabezado de columnas
+    printf("     ");
+    for (int j = 0; j < automata->columnas; j++) {
+        printf("   Col %d   ", j);
+    }
+    printf("\n");
+
+    // Imprimir separador
+    printf("     ");
+    for (int j = 0; j < automata->columnas; j++) {
+        printf("-----------");
+    }
+    printf("\n");
+
+    // Imprimir filas con etiquetas y contenido
     for (int i = 0; i < automata->filas; i++) {
+        printf("Fila %d |", i);
         for (int j = 0; j < automata->columnas; j++) {
-            printf("%d %d %d %d\n", automata->celulas[i][j].estado.estados[0], automata->celulas[i][j].estado.estados[1], automata->celulas[i][j].estado.estados[2], automata->celulas[i][j].estado.estados[3]);
+            printf(" (%2d,%2d,%2d,%2d) ", automata->celulas[i][j].estado.estados[0], automata->celulas[i][j].estado.estados[1], automata->celulas[i][j].estado.estados[2], automata->celulas[i][j].estado.estados[3]);
         }
+        printf("\n");
     }
 }
-
 void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int columna) {
     celula* celda = &automata->celulas[fila][columna];
     double S = celda->estado.estados[0];
@@ -186,32 +226,114 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
         I_vecinos /= vecinos_contados;
     }
 
-    // Cálculo de los cambios
-    double dS = -BETA * S * I_vecinos * DT;
-    double dE = (BETA * S * I_vecinos - SIGMA * E) * DT;
-    double dI = (SIGMA * E - GAMMA * I) * DT;
-    double dR = GAMMA * I * DT;
+    // Inicializar el generador de números aleatorios
+    srand(time(NULL));
 
-    // Actualizar los valores de la celda
-    celda->estado.estados[0] += dS;
-    celda->estado.estados[1] += dE;
-    celda->estado.estados[2] += dI;
-    celda->estado.estados[3] += dR;
+    // Cálculo de las probabilidades de cambio de estado
+    double prob_infeccion = PROB_INFECCION * I_vecinos;
+    double prob_morbilidad = PROB_MORBILIDAD * E;
+    double prob_recuperacion = PROB_RECUPERACION * I;
+
+    // Actualizar los valores de la celda basados en probabilidades
+    if ((double)rand() / RAND_MAX < prob_infeccion && S > 0) {
+        S -= 1;
+        E += 1;
+    }
+    if ((double)rand() / RAND_MAX < prob_morbilidad && E > 0) {
+        E -= 1;
+        I += 1;
+    }
+    if ((double)rand() / RAND_MAX < prob_recuperacion && I > 0) {
+        I -= 1;
+        R += 1;
+    }
 
     // Asegurarse de que no haya valores negativos
-    if (celda->estado.estados[0] < 0) celda->estado.estados[0] = 0;
-    if (celda->estado.estados[1] < 0) celda->estado.estados[1] = 0;
-    if (celda->estado.estados[2] < 0) celda->estado.estados[2] = 0;
-    if (celda->estado.estados[3] < 0) celda->estado.estados[3] = 0;
+    if (S < 0) S = 0;
+    if (E < 0) E = 0;
+    if (I < 0) I = 0;
+    if (R < 0) R = 0;
 
     // Asegurarse de que la población total no exceda la población máxima
-    double total_poblacion = celda->estado.estados[0] + celda->estado.estados[1] + celda->estado.estados[2] + celda->estado.estados[3];
+    double total_poblacion = S + E + I + R;
     if (total_poblacion > poblacion_maxima) {
         double factor = poblacion_maxima / total_poblacion;
-        celda->estado.estados[0] *= factor;
-        celda->estado.estados[1] *= factor;
-        celda->estado.estados[2] *= factor;
-        celda->estado.estados[3] *= factor;
+        S *= factor;
+        E *= factor;
+        I *= factor;
+        R *= factor;
+    }
+
+    // Actualizar los valores de la celda
+    celda->estado.estados[0] = S;
+    celda->estado.estados[1] = E;
+    celda->estado.estados[2] = I;
+    celda->estado.estados[3] = R;
+}
+
+
+automataAsimetrico* crearAutomataAsimetrico(int filas, int columnas) {
+    automataAsimetrico* automata = (automataAsimetrico*)malloc(sizeof(automataAsimetrico));
+    automata->filas = filas;
+    automata->columnas = columnas;
+    automata->automatas = (automataCelular**)malloc(filas * sizeof(automataCelular*));
+    if (!automata->automatas) {
+        fprintf(stderr, "Error al asignar memoria para el autómata.\n");
+        exit(EXIT_FAILURE);
+    }
+    for (int i = 0; i < filas; i++) {
+        automata->automatas[i] = (automataCelular*)malloc(columnas * sizeof(automataCelular));
+        if (!automata->automatas[i]) {
+            fprintf(stderr, "Error al asignar memoria para las celdas del autómata.\n");
+            exit(EXIT_FAILURE);
+        }
+        for (int j = 0; j < columnas; j++) {
+            // Inicializar cada celda como un autómata vacío
+            strcpy(automata->automatas[i][j].color, "vacio");
+            automata->automatas[i][j].filas = 0;
+            automata->automatas[i][j].columnas = 0;
+            automata->automatas[i][j].celulas = NULL;
+        }
+    }
+    return automata;
+}
+
+celula* crearCelula(seir* estado) {
+    celula* celda = (celula*)malloc(sizeof(celula));
+    celda->estado = *estado;
+    return celda;
+}
+
+void asignarAutomataSimetrico(automataAsimetrico* automata, int fila, int columna, automataCelular* simetrico) {
+    if (fila >= 0 && fila < automata->filas && columna >= 0 && columna < automata->columnas) {
+        automata->automatas[fila][columna] = *simetrico;
+    } else {
+        fprintf(stderr, "Error: posición fuera de los límites del autómata asimétrico.\n");
+    }
+}
+
+listaAutomatas* crearListaAutomatas(int capacidadInicial) {
+    listaAutomatas* lista = (listaAutomatas*)malloc(sizeof(listaAutomatas));
+    lista->automatas = (automataCelular**)malloc(capacidadInicial * sizeof(automataCelular*));
+    lista->cantidad = 0;
+    lista->capacidad = capacidadInicial;
+    return lista;
+}
+
+void agregarAutomata(listaAutomatas* lista, automataCelular* automata) {
+    if (lista->cantidad == lista->capacidad) {
+        lista->capacidad *= 2;
+        lista->automatas = (automataCelular**)realloc(lista->automatas, lista->capacidad * sizeof(automataCelular*));
+    }
+    lista->automatas[lista->cantidad++] = automata;
+}
+
+
+void imprimirAutomataAsimetrico(automataAsimetrico* automata) {
+    for (int i = 0; i < automata->filas; i++) {
+        for (int j = 0; j < automata->columnas; j++) {
+            printf("Automata en (%d, %d): %s\n", i, j, automata->automatas[i][j].color);
+        }
     }
 }
 
