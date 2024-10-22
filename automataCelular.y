@@ -51,11 +51,38 @@ instruccion:
     ;
 
 funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
-        seir* listaseir = convertirSubarraysASeir($5, $3 * $4);
-        automataCelular* automata = crearAutomataSimetrico($2, $3, $4, listaseir);
-        agregarAutomata(listaAutomatasGlobal, automata);
-        imprimirAutomata(automata);
+    if (!listaAutomatasGlobal) {
+        listaAutomatasGlobal = crearListaAutomatas(10);
+        if (!listaAutomatasGlobal) {
+            yyerror("No se pudo crear la lista de autómatas");
+            YYERROR;
+        }
     }
+    
+    if ($5 == NULL) {
+        yyerror("Error: celulas es NULL");
+        YYERROR;
+    }
+    
+    seir* listaseir = convertirSubarraysASeir($5, $3 * $4);
+    if (!listaseir) {
+        yyerror("Error al convertir estados SEIR");
+        YYERROR;
+    }
+    
+    automataCelular* automata = crearAutomataSimetrico($2, $3, $4, listaseir);
+    if (!automata) {
+        free(listaseir);
+        yyerror("Error al crear autómata simétrico");
+        YYERROR;
+    }
+    
+    agregarAutomata(listaAutomatasGlobal, automata);
+    imprimirAutomata(automata);
+    
+    free(listaseir); // Liberar la memoria después de usar listaseir
+}
+
     |
     VECINDAD NUMERO NUMERO {
         int vecindad[8][2];
@@ -314,7 +341,15 @@ void asignarAutomataSimetrico(automataAsimetrico* automata, int fila, int column
 
 listaAutomatas* crearListaAutomatas(int capacidadInicial) {
     listaAutomatas* lista = (listaAutomatas*)malloc(sizeof(listaAutomatas));
+    if (!lista) {
+        fprintf(stderr, "Error al asignar memoria para la lista de autómatas.\n");
+        exit(EXIT_FAILURE);
+    }
     lista->automatas = (automataCelular**)malloc(capacidadInicial * sizeof(automataCelular*));
+    if (!lista->automatas) {
+        fprintf(stderr, "Error al asignar memoria para la lista de autómatas.\n");
+        exit(EXIT_FAILURE);
+    }
     lista->cantidad = 0;
     lista->capacidad = capacidadInicial;
     return lista;
@@ -324,15 +359,55 @@ void agregarAutomata(listaAutomatas* lista, automataCelular* automata) {
     if (lista->cantidad == lista->capacidad) {
         lista->capacidad *= 2;
         lista->automatas = (automataCelular**)realloc(lista->automatas, lista->capacidad * sizeof(automataCelular*));
+        if (!lista->automatas) {
+            fprintf(stderr, "Error al reasignar memoria para la lista de autómatas.\n");
+            exit(EXIT_FAILURE);
+        }
     }
     lista->automatas[lista->cantidad++] = automata;
 }
 
 
 void imprimirAutomataAsimetrico(automataAsimetrico* automata) {
+    printf("Automata Asimetrico:\n");
+
+    // Imprimir encabezado de columnas
+    printf("     ");
+    for (int j = 0; j < automata->columnas; j++) {
+        printf("   Col %d   ", j);
+    }
+    printf("\n");
+
+    // Imprimir separador
+    printf("     ");
+    for (int j = 0; j < automata->columnas; j++) {
+        printf("-----------");
+    }
+    printf("\n");
+
+    // Imprimir filas con etiquetas y contenido
+    for (int i = 0; i < automata->filas; i++) {
+        printf("Fila %d |", i);
+        for (int j = 0; j < automata->columnas; j++) {
+            automataCelular* subAutomata = &automata->automatas[i][j];
+            if (subAutomata->celulas != NULL) {
+                printf(" [%s] ", subAutomata->color);
+            } else {
+                printf(" [vacio] ");
+            }
+        }
+        printf("\n");
+    }
+
+    // Imprimir las submatrices
     for (int i = 0; i < automata->filas; i++) {
         for (int j = 0; j < automata->columnas; j++) {
-            printf("Automata en (%d, %d): %s\n", i, j, automata->automatas[i][j].color);
+            automataCelular* subAutomata = &automata->automatas[i][j];
+            if (subAutomata->celulas != NULL) {
+                printf("Submatriz en (%d, %d):\n", i, j);
+                imprimirAutomata(subAutomata);
+                printf("\n");
+            }
         }
     }
 }
