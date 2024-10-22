@@ -1,12 +1,18 @@
 %{
 #include "automataCelular.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <stdbool.h>
 extern FILE *yyin;
 
+
 // Declaración de constantes globales
-const double BETA = 0.3;   // Tasa de infección
-const double SIGMA = 0.5;  // Tasa de morbilidad (E -> I)
-const double GAMMA = 1.0 / 3.0; // Tasa de recuperación (7 días)
-const double DT = 0.7;      // Paso de tiempo
+const double BETA = 0.7;   // Tasa de infección
+const double SIGMA = 0.8;  // Tasa de morbilidad (E -> I)
+const double GAMMA = 1.0 / 2.0; // Tasa de recuperación (7 días)
+const double DT = 0.9;      // Paso de tiempo
 const int POBLACION_MAXIMA = 100;
 
 // Declaraciones de funciones
