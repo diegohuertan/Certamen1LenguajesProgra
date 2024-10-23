@@ -91,17 +91,21 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
         imprimirVecindad(vecindad);
     }
     |
-    SIMULAR {
-        for (int sim = 0; sim < 6; sim++) {
-            printf("Simulación %d:\n", sim);
-        for (int iter = 0; iter < 20; iter++) {
-        for (int i = 0; i < automata->filas; i++) {
-            for (int j = 0; j < automata->columnas; j++) {
-                actualizar_celda_con_vecinos(automata, i, j);
+    SIMULAR NUMERO{
+        for (int pasos=0; pasos<=$2; pasos++){
+        for (int act = 0; act < listaAutomatasGlobal->cantidad; act++) {
+            automataCelular* simetrico = listaAutomatasGlobal->automatas[act];
+            for (int iter = 0; iter < 20; iter++) {
+                for (int i = 0; i < simetrico->filas; i++) {
+                    for (int j = 0; j < simetrico->columnas; j++) {
+                        actualizar_celda_con_vecinos(simetrico, i, j);
+                    }
+                }
             }
+            imprimirAutomata(simetrico);
         }
-        }
-        imprimirAutomata(automata);
+     printf("Simulacion numero: %d \n",pasos);
+
     }
     }
     |
@@ -232,43 +236,89 @@ void imprimirAutomata(automataCelular* automata) {
         printf("\n");
     }
 }
+
 void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int columna) {
     celula* celda = &automata->celulas[fila][columna];
-    double s = celda->estado.estados[0];
-    double e = celda->estado.estados[1];
-    double i = celda->estado.estados[2];
-    double r = celda->estado.estados[3];
+    
+    double S = celda->estado.estados[0];
+    double E = celda->estado.estados[1];
+    double I = celda->estado.estados[2];
+    double R = celda->estado.estados[3];
+    double poblacion_maxima = POBLACION_MAXIMA;
 
-    // Lógica de actualización
-    if (s > 0) {
-        s -= 1;
-        e += 1;
-    } else if (e > 0) {
-        e -= 1;
-        i += 1;
-    } else if (i > 0) {
-        i -= 1;
-        r += 1;
+    // Acumular infectados de los vecinos (Vecindad de Moore)
+    double I_vecinos = 0;
+    int vecinos_contados = 0;
+    int vecindad[8][2];
+    obtenerVecindadMoore(automata, fila, columna, vecindad);
+
+    for (int k = 0; k < 8; k++) {
+        int ni = vecindad[k][0];
+        int nj = vecindad[k][1];
+        if (ni != -1 && nj != -1) {
+            I_vecinos += automata->celulas[ni][nj].estado.estados[2];
+            vecinos_contados++;
+        }
     }
 
-    // Asegurarse de que los valores no sean negativos
-    if (s < 0) s = 0;
-    if (e < 0) e = 0;
-    if (i < 0) i = 0;
-    if (r < 0) r = 0;
+    // Acumular infectados de los autómatas vecinos conectados
+    conexion* actual = automata->conexiones;
+    while (actual) {
+        automataCelular* automataVecino = actual->conectado;
+        if (automataVecino && automataVecino->celulas) {
+            I_vecinos += automataVecino->celulas[1][1].estado.estados[2]; // Ajusta el índice según sea necesario
+            vecinos_contados++;
+        }
+        actual = actual->siguiente;
+    }
 
-    // Aplicar un factor de ajuste
-    double factor = 1.0; // Puedes ajustar este valor según sea necesario
-    s *= factor;
-    e *= factor;
-    i *= factor;
-    r *= factor;
+    if (vecinos_contados > 0) {
+        I_vecinos /= vecinos_contados;
+    }
 
-    // Actualizar los estados de la celda
-    celda->estado.estados[0] = s;
-    celda->estado.estados[1] = e;
-    celda->estado.estados[2] = i;
-    celda->estado.estados[3] = r;
+    // Inicializar el generador de números aleatorios
+    srand(time(NULL));
+
+    // Cálculo de las probabilidades de cambio de estado
+    double prob_infeccion = PROB_INFECCION * I_vecinos;
+    double prob_morbilidad = PROB_MORBILIDAD * E;
+    double prob_recuperacion = PROB_RECUPERACION * I;
+
+    // Actualizar los valores de la celda basados en probabilidades
+    if ((double)rand() / RAND_MAX < prob_infeccion && S > 0) {
+        S -= 1;
+        E += 1;
+    }
+    if ((double)rand() / RAND_MAX < prob_morbilidad && E > 0) {
+        E -= 1;
+        I += 1;
+    }
+    if ((double)rand() / RAND_MAX < prob_recuperacion && I > 0) {
+        I -= 1;
+        R += 1;
+    }
+
+    // Asegurarse de que no haya valores negativos
+    if (S < 0) S = 0;
+    if (E < 0) E = 0;
+    if (I < 0) I = 0;
+    if (R < 0) R = 0;
+
+    // Asegurarse de que la población total no exceda la población máxima
+    double total_poblacion = S + E + I + R;
+    if (total_poblacion > poblacion_maxima) {
+        double factor = poblacion_maxima / total_poblacion;
+        S *= factor;
+        E *= factor;
+        I *= factor;
+        R *= factor;
+    }
+
+    // Actualizar los valores de la celda
+    celda->estado.estados[0] = S;
+    celda->estado.estados[1] = E;
+    celda->estado.estados[2] = I;
+    celda->estado.estados[3] = R;
 }
 
 
