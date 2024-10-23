@@ -32,7 +32,7 @@ automataAsimetrico* automataAsimetricoGlobal;
 
 /* Definiciones de tokens */
 %type <subarraylist> celulas
-%token<strval> CREARAUTOMATA DEFAULT S E I R COLOR VECINDAD SIMULAR ASIMETRICO ASIGNAR CONECTAR AISLAR
+%token<strval> CREARAUTOMATA DEFAULT S E I R COLOR VECINDAD SIMULAR ASIMETRICO ASIGNAR CONECTAR AISLAR IMPRIMIR
 %token<ival> NUMERO
 %token<subarraylist> ESTADOSSEIR
 %token ENDLINE
@@ -79,7 +79,6 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
     }
     
     agregarAutomata(listaAutomatasGlobal, automata);
-    imprimirAutomata(automata);
     
     free(listaseir); // Liberar la memoria después de usar listaseir
 }
@@ -92,7 +91,7 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
     }
     |
     SIMULAR NUMERO{
-        for (int pasos=0; pasos ==$2; pasos++){
+        for (int pasos=0; pasos <=$2; pasos++){
         for (int act = 0; act < listaAutomatasGlobal->cantidad; act++) {
             automataCelular* simetrico = listaAutomatasGlobal->automatas[act];
                 for (int i = 0; i < simetrico->filas; i++) {
@@ -110,14 +109,12 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
     |
     ASIMETRICO NUMERO NUMERO {
         automataAsimetricoGlobal = crearAutomataAsimetrico($2, $3);
-        imprimirAutomataAsimetrico(automataAsimetricoGlobal);
     }
     |
     ASIGNAR NUMERO NUMERO NUMERO {
         if ($4 < listaAutomatasGlobal->cantidad) {
             automataCelular* simetrico = listaAutomatasGlobal->automatas[$4];
             asignarAutomataSimetrico(automataAsimetricoGlobal, $2, $3, simetrico);
-            imprimirAutomataAsimetrico(automataAsimetricoGlobal);
         } else {
             fprintf(stderr, "Error: índice de autómata simétrico fuera de rango.\n");
         }
@@ -126,6 +123,10 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
     AISLAR {
         eliminarConexiones(automataAsimetricoGlobal);
     }
+    | 
+    IMPRIMIR {
+        imprimirAutomataAsimetrico(automataAsimetricoGlobal);
+    } 
     ;
 celulas:
     ESTADOSSEIR {
@@ -139,7 +140,6 @@ celulas:
 conectar:
     CONECTAR NUMERO NUMERO NUMERO NUMERO {
         conectarAutomatas(&automataAsimetricoGlobal->automatas[$2][$3], &automataAsimetricoGlobal->automatas[$4][$5]);
-        imprimirAutomataAsimetrico1(automataAsimetricoGlobal);
     }
     ;
 %%
@@ -211,25 +211,8 @@ void imprimirVecindad(int vecindad[8][2]) {
 }
 
 void imprimirAutomata(automataCelular* automata) {
-    printf("Automata: %s\n",automata->color);
-
-    // Imprimir encabezado de columnas
-    printf("     ");
-    for (int j = 0; j < automata->columnas; j++) {
-        printf("   Col %d   ", j);
-    }
-    printf("\n");
-
-    // Imprimir separador
-    printf("     ");
-    for (int j = 0; j < automata->columnas; j++) {
-        printf("-----------");
-    }
-    printf("\n");
-
-    // Imprimir filas con etiquetas y contenido
+    // Imprimir matriz y contenido del automata simetrico
     for (int i = 0; i < automata->filas; i++) {
-        printf("Fila %d |", i);
         for (int j = 0; j < automata->columnas; j++) {
             printf(" (%2d,%2d,%2d,%2d) ", automata->celulas[i][j].estado.estados[0], automata->celulas[i][j].estado.estados[1], automata->celulas[i][j].estado.estados[2], automata->celulas[i][j].estado.estados[3]);
         }
@@ -263,14 +246,13 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
 
     // Acumular infectados de los autómatas vecinos conectados
     conexion* actual = automata->conexiones;
-    while (actual) {
+    
         automataCelular* automataVecino = actual->conectado;
         if (automataVecino && automataVecino->celulas) {
             I_vecinos += automataVecino->celulas[1][1].estado.estados[2]; // Ajusta el índice según sea necesario
             vecinos_contados++;
         }
-        actual = actual->siguiente;
-    }
+
 
     if (vecinos_contados > 0) {
         I_vecinos /= vecinos_contados;
@@ -319,7 +301,6 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
     celda->estado.estados[1] = E;
     celda->estado.estados[2] = I;
     celda->estado.estados[3] = R;
-    printf("Nuevos Estados: (S:%f,E:%f,I:%f,R:%f)\n", S, E, I, R);
 }
 
 
@@ -393,46 +374,86 @@ void agregarAutomata(listaAutomatas* lista, automataCelular* automata) {
 
 
 void imprimirAutomataAsimetrico(automataAsimetrico* automata) {
-    printf("Automata Asimetrico:\n");
-
-    // Imprimir encabezado de columnas
-    printf("     ");
-    for (int j = 0; j < automata->columnas; j++) {
-        printf("   Col %d   ", j);
-    }
-    printf("\n");
-
-    // Imprimir separador
-    printf("     ");
-    for (int j = 0; j < automata->columnas; j++) {
-        printf("-----------");
-    }
-    printf("\n");
-
-    // Imprimir filas con etiquetas y contenido
+    printf("\n=== Autómata Asimétrico %dx%d ===\n\n", automata->filas, automata->columnas);
+    
+    // Para cada fila del autómata principal
     for (int i = 0; i < automata->filas; i++) {
-        printf("Fila %d |", i);
+        int maxSubFilas = 0;
+        int* anchoSubmatrices = malloc(automata->columnas * sizeof(int));
+        
+        // Calcular el ancho estándar para todas las submatrices
+        int anchoEstandar = 30; // Ancho mínimo para mantener consistencia
+        
+        // Calcular la altura máxima y anchos
         for (int j = 0; j < automata->columnas; j++) {
             automataCelular* subAutomata = &automata->automatas[i][j];
             if (subAutomata->celulas != NULL) {
-                printf(" [%s] ", subAutomata->color);
+                if (subAutomata->filas > maxSubFilas) {
+                    maxSubFilas = subAutomata->filas;
+                }
+                // Calcular el ancho necesario para esta submatriz
+                int anchoNecesario = subAutomata->columnas * 14;
+                anchoSubmatrices[j] = anchoNecesario > anchoEstandar ? anchoNecesario : anchoEstandar;
             } else {
-                printf(" [vacio] ");
+                anchoSubmatrices[j] = anchoEstandar;
             }
+        }
+        
+        // Si no hay submatrices con contenido, asegurar altura mínima
+        if (maxSubFilas == 0) maxSubFilas = 1;
+        
+        // Línea superior de la fila actual
+        for (int j = 0; j < automata->columnas; j++) {
+            printf("┌");
+            for (int k = 0; k < anchoSubmatrices[j]; k++) printf("─");
+            printf("┐ ");
         }
         printf("\n");
-    }
-
-    // Imprimir las submatrices
-    for (int i = 0; i < automata->filas; i++) {
-        for (int j = 0; j < automata->columnas; j++) {
-            automataCelular* subAutomata = &automata->automatas[i][j];
-            if (subAutomata->celulas != NULL) {
-                printf("Submatriz en (%d, %d):\n", i, j);
-                imprimirAutomata(subAutomata);
-                printf("\n");
+        
+        // Imprimir el contenido de las submatrices
+        for (int subFila = 0; subFila < maxSubFilas; subFila++) {
+            for (int j = 0; j < automata->columnas; j++) {
+                automataCelular* subAutomata = &automata->automatas[i][j];
+                printf("│");
+                
+                if (subAutomata->celulas != NULL && subFila < subAutomata->filas) {
+                    // Calcular espaciado inicial para centrar
+                    int espacioInicial = (anchoSubmatrices[j] - (subAutomata->columnas * 14)) / 2;
+                    for (int s = 0; s < espacioInicial; s++) printf(" ");
+                    
+                    // Imprimir los estados
+                    for (int l = 0; l < subAutomata->columnas; l++) {
+                        printf("(%2d,%2d,%2d,%2d) ", 
+                            subAutomata->celulas[subFila][l].estado.estados[0],
+                            subAutomata->celulas[subFila][l].estado.estados[1],
+                            subAutomata->celulas[subFila][l].estado.estados[2],
+                            subAutomata->celulas[subFila][l].estado.estados[3]);
+                    }
+                    
+                    // Espaciado final para centrar
+                    int espacioFinal = anchoSubmatrices[j] - espacioInicial - (subAutomata->columnas * 14);
+                    for (int s = 0; s < espacioFinal; s++) printf(" ");
+                } else {
+                    // Centrar [vacío] en el espacio disponible
+                    int espacios = (anchoSubmatrices[j] - 8) / 2;
+                    for (int s = 0; s < espacios; s++) printf(" ");
+                    printf("[vacío]");
+                    for (int s = 0; s < anchoSubmatrices[j] - espacios - 8; s++) printf(" ");
+                }
+                printf("│ ");
             }
+            printf("\n");
         }
+        
+        // Línea inferior de la fila actual
+        for (int j = 0; j < automata->columnas; j++) {
+            printf("└");
+            for (int k = 0; k < anchoSubmatrices[j]; k++) printf("─");
+            printf("┘ ");
+        }
+        printf("\n\n");
+        
+        free(anchoSubmatrices);
     }
 }
 
