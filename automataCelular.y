@@ -211,6 +211,11 @@ void imprimirVecindad(int vecindad[8][2]) {
 }
 
 void imprimirAutomata(automataCelular* automata) {
+    if (automata == NULL || automata->celulas == NULL) {
+        fprintf(stderr, "Error: Automata o celulas no inicializadas.\n");
+        return;
+    }
+
     // Imprimir matriz y contenido del automata simetrico
     for (int i = 0; i < automata->filas; i++) {
         for (int j = 0; j < automata->columnas; j++) {
@@ -221,12 +226,22 @@ void imprimirAutomata(automataCelular* automata) {
 }
 
 void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int columna) {
+    if (automata == NULL || automata->celulas == NULL) {
+        fprintf(stderr, "Error: Automata o celulas no inicializadas.\n");
+        return;
+    }
+
+    if (fila < 0 || fila >= automata->filas || columna < 0 || columna >= automata->columnas) {
+        fprintf(stderr, "Error: Indices fuera de los limites. fila: %d, columna: %d\n", fila, columna);
+        return;
+    }
+
     celula* celda = &automata->celulas[fila][columna];
     
-    double S = celda->estado.estados[0];
-    double E = celda->estado.estados[1];
-    double I = celda->estado.estados[2];
-    double R = celda->estado.estados[3];
+    double Susceptible = celda->estado.estados[0];
+    double Expuesto = celda->estado.estados[1];
+    double Infectado = celda->estado.estados[2];
+    double Recuperado = celda->estado.estados[3];
     double poblacion_maxima = POBLACION_MAXIMA;
 
     // Acumular infectados de los vecinos (Vecindad de Moore)
@@ -247,12 +262,14 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
     // Acumular infectados de los autómatas vecinos conectados
     conexion* actual = automata->conexiones;
     
+    while (actual != NULL) {
         automataCelular* automataVecino = actual->conectado;
         if (automataVecino && automataVecino->celulas) {
             I_vecinos += automataVecino->celulas[1][1].estado.estados[2]; // Ajusta el índice según sea necesario
             vecinos_contados++;
         }
-
+        actual = actual->siguiente;
+    }
 
     if (vecinos_contados > 0) {
         I_vecinos /= vecinos_contados;
@@ -263,44 +280,44 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
 
     // Cálculo de las probabilidades de cambio de estado
     double prob_infeccion = PROB_INFECCION * I_vecinos;
-    double prob_morbilidad = PROB_MORBILIDAD * E;
-    double prob_recuperacion = PROB_RECUPERACION * I;
+    double prob_morbilidad = PROB_MORBILIDAD * Expuesto;
+    double prob_recuperacion = PROB_RECUPERACION * Infectado;
 
     // Actualizar los valores de la celda basados en probabilidades
-    if ((double)rand() / RAND_MAX < prob_infeccion && S > 0) {
-        S -= 1;
-        E += 1;
+    if ((double)rand() / RAND_MAX < prob_infeccion && Susceptible > 0) {
+        Susceptible -= 1;
+        Expuesto += 1;
     }
-    if ((double)rand() / RAND_MAX < prob_morbilidad && E > 0) {
-        E -= 1;
-        I += 1;
+    if ((double)rand() / RAND_MAX < prob_morbilidad && Expuesto > 0) {
+        Expuesto -= 1;
+        Infectado += 1;
     }
-    if ((double)rand() / RAND_MAX < prob_recuperacion && I > 0) {
-        I -= 1;
-        R += 1;
+    if ((double)rand() / RAND_MAX < prob_recuperacion && Infectado > 0) {
+        Infectado -= 1;
+        Recuperado += 1;
     }
 
     // Asegurarse de que no haya valores negativos
-    if (S < 0) S = 0;
-    if (E < 0) E = 0;
-    if (I < 0) I = 0;
-    if (R < 0) R = 0;
+    if (Susceptible < 0) Susceptible = 0;
+    if (Expuesto < 0) Expuesto = 0;
+    if (Infectado < 0) Infectado = 0;
+    if (Recuperado < 0) Recuperado = 0;
 
     // Asegurarse de que la población total no exceda la población máxima
-    double total_poblacion = S + E + I + R;
+    double total_poblacion = Susceptible + Expuesto + Infectado + Recuperado;
     if (total_poblacion > poblacion_maxima) {
         double factor = poblacion_maxima / total_poblacion;
-        S *= factor;
-        E *= factor;
-        I *= factor;
-        R *= factor;
+        Susceptible *= factor;
+        Expuesto *= factor;
+        Infectado *= factor;
+        Recuperado *= factor;
     }
 
     // Actualizar los valores de la celda
-    celda->estado.estados[0] = S;
-    celda->estado.estados[1] = E;
-    celda->estado.estados[2] = I;
-    celda->estado.estados[3] = R;
+    celda->estado.estados[0] = Susceptible;
+    celda->estado.estados[1] = Expuesto;
+    celda->estado.estados[2] = Infectado;
+    celda->estado.estados[3] = Recuperado;
 }
 
 
