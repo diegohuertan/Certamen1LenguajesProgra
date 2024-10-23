@@ -1,18 +1,26 @@
 crear automata simetrico rojo 2 2 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0
-crear automata simetrico gris 2 2 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0
-crear automata simetrico negro 2 2 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0
+crear automata simetrico gris 2 3 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0 s98 e1 i1 r0 s98 e1 i1 r0
+crear automata simetrico negro 3 2 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0 s98 e1 i1 r0 s98 e1 i1 r0
+crear automata simetrico verde 2 2 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0
+crear automata simetrico amarillo 2 2 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0
+crear automata simetrico azul 2 2 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0
+crear automata simetrico violeta 2 6 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0 
+crear automata simetrico fuxia 6 2 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0 
 
-asimetrico 2 2
+asimetrico 4 4
 asignar 0 0 0
 asignar 0 1 1
-asignar 1 0 2
+asignar 0 2 2
+asignar 1 0 3
+asignar 1 1 4
+asignar 1 2 5
+asignar 3 3 6
+asignar 2 2 7
 conectar 0 0 0 1
 conectar 1 0 0 0
-
-
-
-
-
-
-
+conectar 0 2 0 1
+conectar 1 2 3 3
+conectar 1 2 2 2
+conectar 1 1 1 2
+conectar 3 3 2 2
 
