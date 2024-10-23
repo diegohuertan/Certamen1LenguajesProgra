@@ -387,17 +387,26 @@ void imprimirAutomataAsimetrico(automataAsimetrico* automata) {
 
 void conectarAutomatas(automataCelular* automata1, automataCelular* automata2) {
     if (automata1 && automata2) {
-        automata1->conectado = automata2;
-        automata2->conectado = automata1;  // Conexión bidireccional
+        agregarConexion(automata1, automata2);
+        agregarConexion(automata2, automata1);  // Conexión bidireccional
     }
+}
+
+void agregarConexion(automataCelular* automata, automataCelular* conectado) {
+    conexion* nuevaConexion = (conexion*)malloc(sizeof(conexion));
+    nuevaConexion->conectado = conectado;
+    nuevaConexion->siguiente = automata->conexiones;
+    automata->conexiones = nuevaConexion;
 }
 
 void imprimirAutomataAsimetrico1(automataAsimetrico* automata) {
     for (int i = 0; i < automata->filas; i++) {
         for (int j = 0; j < automata->columnas; j++) {
             printf("[%s]", automata->automatas[i][j].color);
-            if (automata->automatas[i][j].conectado) {
-                printf(" -> Conectado a [%s]", automata->automatas[i][j].conectado->color);
+            conexion* actual = automata->automatas[i][j].conexiones;
+            while (actual) {
+                printf(" -> Conectado a [%s]", actual->conectado->color);
+                actual = actual->siguiente;
             }
             printf("\t");
         }
