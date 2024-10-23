@@ -16,6 +16,7 @@ int** convertirCadenaASubarrays(char* cadena, int* longitud);
 [0-9]+       { yylval.ival = atoi(yytext); return NUMERO; }
 "vecindad" { return VECINDAD; }
 "crear automata simetrico" { return CREARAUTOMATA; }
+"conectar" { return CONECTAR;}
 "simular"   { return SIMULAR; }
 "asimetrico" { return ASIMETRICO; }
 "asignar"   { return ASIGNAR; }

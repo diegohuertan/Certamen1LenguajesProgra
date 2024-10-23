@@ -14,10 +14,11 @@ typedef struct celula {
 } celula;
 
 typedef struct automataCelular {
-    char color[50];
-    celula **celulas;
+    char color[20];
     int filas;
     int columnas;
+    celula** celulas;
+    struct automataCelular* conectado; // Puntero para la conexión con otro autómata
 } automataCelular;
 
 typedef struct automataAsimetrico {
@@ -45,5 +46,7 @@ void obtenerVecindadMoore(automataCelular* automata, int i, int j, int vecindad[
 void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int columna);
 listaAutomatas* crearListaAutomatas(int capacidadInicial);
 void agregarAutomata(listaAutomatas* lista, automataCelular* automata);
+void conectarAutomatas(automataCelular* automata1, automataCelular* automata2);
+void imprimirAutomataAsimetrico1(automataAsimetrico* automata);
 
 #endif // AUTOMATA_CELULAR_H
