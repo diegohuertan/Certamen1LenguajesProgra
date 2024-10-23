@@ -54,5 +54,6 @@ void agregarAutomata(listaAutomatas* lista, automataCelular* automata);
 void conectarAutomatas(automataCelular* automata1, automataCelular* automata2);
 void agregarConexion(automataCelular* automata, automataCelular* conectado);
 void imprimirAutomataAsimetrico1(automataAsimetrico* automata);
+void eliminarConexiones(automataAsimetrico* automata);
 
 #endif // AUTOMATA_CELULAR_H
