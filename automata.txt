@@ -1,0 +1,15 @@
+crear automata simetrico rojo 2 2 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0
+crear automata simetrico gris 2 2 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0
+crear automata simetrico negro 2 2 s98 e1 i1 r0 s90 e5 i5 r0 s80 e15 i5 r0 s98 e1 i1 r0
+
+asimetrico 2 2
+asignar 0 0 0
+asignar 0 1 1
+asignar 1 0 2
+conectar 0 0 0 1
+conectar 1 0 0 0
+
+
+
+
+

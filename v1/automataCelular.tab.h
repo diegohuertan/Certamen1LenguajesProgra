@@ -55,15 +55,19 @@ extern int yydebug;
     YYerror = 256,                 /* error  */
     YYUNDEF = 257,                 /* "invalid token"  */
     CREARAUTOMATA = 258,           /* CREARAUTOMATA  */
-    TIPOVECINDAD = 259,            /* TIPOVECINDAD  */
-    DEFAULT = 260,                 /* DEFAULT  */
-    S = 261,                       /* S  */
-    E = 262,                       /* E  */
-    I = 263,                       /* I  */
-    R = 264,                       /* R  */
-    COLOR = 265,                   /* COLOR  */
-    NUMERO = 266,                  /* NUMERO  */
-    ENDLINE = 267                  /* ENDLINE  */
+    DEFAULT = 259,                 /* DEFAULT  */
+    S = 260,                       /* S  */
+    E = 261,                       /* E  */
+    I = 262,                       /* I  */
+    R = 263,                       /* R  */
+    COLOR = 264,                   /* COLOR  */
+    VECINDAD = 265,                /* VECINDAD  */
+    SIMULAR = 266,                 /* SIMULAR  */
+    ASIMETRICO = 267,              /* ASIMETRICO  */
+    ASIGNAR = 268,                 /* ASIGNAR  */
+    NUMERO = 269,                  /* NUMERO  */
+    ESTADOSSEIR = 270,             /* ESTADOSSEIR  */
+    ENDLINE = 271                  /* ENDLINE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -72,12 +76,13 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 37 "automataCelular.y"
+#line 27 "automataCelular.y"
 
     int ival;
-    char strval[50];
+    char* strval;
+    int** subarraylist;  // Para almacenar una lista de subarrays
 
-#line 81 "automataCelular.tab.h"
+#line 86 "automataCelular.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
