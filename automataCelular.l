@@ -17,6 +17,7 @@ int** convertirCadenaASubarrays(char* cadena, int* longitud);
 "vecindad" { return VECINDAD; }
 "crear automata simetrico" { return CREARAUTOMATA; }
 "conectar" { return CONECTAR;}
+"aislar poblacion"   { return AISLAR; }
 "simular"   { return SIMULAR; }
 "asimetrico" { return ASIMETRICO; }
 "asignar"   { return ASIGNAR; }

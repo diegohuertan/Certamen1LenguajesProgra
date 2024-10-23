@@ -32,7 +32,7 @@ automataAsimetrico* automataAsimetricoGlobal;
 
 /* Definiciones de tokens */
 %type <subarraylist> celulas
-%token<strval> CREARAUTOMATA DEFAULT S E I R COLOR VECINDAD SIMULAR ASIMETRICO ASIGNAR CONECTAR
+%token<strval> CREARAUTOMATA DEFAULT S E I R COLOR VECINDAD SIMULAR ASIMETRICO ASIGNAR CONECTAR AISLAR
 %token<ival> NUMERO
 %token<subarraylist> ESTADOSSEIR
 %token ENDLINE
@@ -92,21 +92,20 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
     }
     |
     SIMULAR NUMERO{
-        for (int pasos=0; pasos<=$2; pasos++){
+        for (int pasos=0; pasos ==$2; pasos++){
         for (int act = 0; act < listaAutomatasGlobal->cantidad; act++) {
             automataCelular* simetrico = listaAutomatasGlobal->automatas[act];
-            for (int iter = 0; iter < 20; iter++) {
                 for (int i = 0; i < simetrico->filas; i++) {
                     for (int j = 0; j < simetrico->columnas; j++) {
                         actualizar_celda_con_vecinos(simetrico, i, j);
                     }
                 }
             }
-            imprimirAutomata(simetrico);
-        }
-     printf("Simulacion numero: %d \n",pasos);
+            imprimirAutomataAsimetrico(automataAsimetricoGlobal);
+                 printf("Simulacion numero: %d \n",pasos);
 
-    }
+        }
+
     }
     |
     ASIMETRICO NUMERO NUMERO {
@@ -123,14 +122,15 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
             fprintf(stderr, "Error: índice de autómata simétrico fuera de rango.\n");
         }
     }
+    |
+    AISLAR {
+        eliminarConexiones(automataAsimetricoGlobal);
+    }
     ;
 celulas:
     ESTADOSSEIR {
         $$ = $1;  // Asigna el valor del subarray a $$ para que esté disponible
-        printf("ESTADOSSEIR:\n");
-        for (int i = 0; i < 2 * 2; i++) {
-            printf("(%d, %d, %d, %d)\n", $1[i][0], $1[i][1], $1[i][2], $1[i][3]);
-        }
+        
     }
     | ENDLINE {
         $$ = NULL;  // También asigna NULL en este caso para el retorno
@@ -319,6 +319,7 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
     celda->estado.estados[1] = E;
     celda->estado.estados[2] = I;
     celda->estado.estados[3] = R;
+    printf("Nuevos Estados: (S:%f,E:%f,I:%f,R:%f)\n", S, E, I, R);
 }
 
 
@@ -447,6 +448,23 @@ void agregarConexion(automataCelular* automata, automataCelular* conectado) {
     nuevaConexion->conectado = conectado;
     nuevaConexion->siguiente = automata->conexiones;
     automata->conexiones = nuevaConexion;
+}
+
+void eliminarConexiones(automataAsimetrico* automata) {
+    for (int i = 0; i < automata->filas; i++) {
+        for (int j = 0; j < automata->columnas; j++) {
+            automataCelular* subAutomata = &automata->automatas[i][j];
+            if (subAutomata->conexiones) {
+                conexion* actual = subAutomata->conexiones;
+                while (actual) {
+                    conexion* siguiente = actual->siguiente;
+                    free(actual);
+                    actual = siguiente;
+                }
+                subAutomata->conexiones = NULL;
+            }
+        }
+    }
 }
 
 void imprimirAutomataAsimetrico1(automataAsimetrico* automata) {
