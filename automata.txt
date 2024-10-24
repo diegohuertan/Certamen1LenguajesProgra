@@ -16,12 +16,14 @@ asignar 4 3 4
 asignar 5 4 5
 asignar 1 5 6
 asignar 1 4 7
-conectar 0 0 0 1
+conectar 0 1 1 0
 conectar 1 0 3 0
 conectar 0 1 2 2
 conectar 2 2 3 0
 conectar 2 2 4 3
-
+conectar 4 3 5 4
+conectar 5 4 1 5
+conectar 1 4 1 5
 
 
 

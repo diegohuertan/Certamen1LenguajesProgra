@@ -53,7 +53,6 @@ listaAutomatas* crearListaAutomatas(int capacidadInicial);
 void agregarAutomata(listaAutomatas* lista, automataCelular* automata);
 void conectarAutomatas(automataCelular* automata1, automataCelular* automata2);
 void agregarConexion(automataCelular* automata, automataCelular* conectado);
-void desconectarAutomata(automataCelular* automata1, automataCelular* automata2);
-void eliminarConexiones(automataCelular* automata, automataCelular* conectado);
+void eliminarConexiones();
 
 #endif // AUTOMATA_CELULAR_H

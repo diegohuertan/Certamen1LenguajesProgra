@@ -19,6 +19,7 @@ int** convertirCadenaASubarrays(char* cadena, int* longitud);
 "conectar" { return CONECTAR;}
 "aislar"   { return AISLAR; }
 "imprimir" {return IMPRIMIR;}
+"conexiones" {return CONEXIONES;}
 "simular"   { return SIMULAR; }
 "asimetrico" { return ASIMETRICO; }
 "asignar"   { return ASIGNAR; }
