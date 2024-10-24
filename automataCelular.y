@@ -112,7 +112,7 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
     }
     |
     ASIGNAR NUMERO NUMERO NUMERO {
-        if ($4 < listaAutomatasGlobal->cantidad) {
+        if ($4 < 8) {
             automataCelular* simetrico = listaAutomatasGlobal->automatas[$4];
             asignarAutomataSimetrico(automataAsimetricoGlobal, $2, $3, simetrico);
         } else {
@@ -120,8 +120,8 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
         }
     }
     |
-    AISLAR {
-        eliminarConexiones(automataAsimetricoGlobal);
+    AISLAR NUMERO NUMERO NUMERO NUMERO {
+       desconectarAutomata(&automataAsimetricoGlobal->automatas[$2][$3], &automataAsimetricoGlobal->automatas[$4][$5]);
     }
     | 
     IMPRIMIR {
@@ -231,7 +231,7 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
         return;
     }
 
-    if (fila < 0 || fila >= automata->filas || columna < 0 || columna >= automata->columnas) {
+    if (fila < 0 || fila >= automata->filas || columna < 0 || fila >= automata->columnas) {
         fprintf(stderr, "Error: Indices fuera de los limites. fila: %d, columna: %d\n", fila, columna);
         return;
     }
@@ -260,7 +260,7 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
     }
 
     // Acumular infectados de los autómatas vecinos conectados
-    conexion* actual = automata->conexiones;
+    conexion* actual = automataAsimetricoGlobal->conexiones;
     
     while (actual != NULL) {
         automataCelular* automataVecino = actual->conectado;
@@ -319,7 +319,6 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
     celda->estado.estados[2] = Infectado;
     celda->estado.estados[3] = Recuperado;
 }
-
 
 automataAsimetrico* crearAutomataAsimetrico(int filas, int columnas) {
     automataAsimetrico* automata = (automataAsimetrico*)malloc(sizeof(automataAsimetrico));
@@ -477,48 +476,57 @@ void imprimirAutomataAsimetrico(automataAsimetrico* automata) {
 void conectarAutomatas(automataCelular* automata1, automataCelular* automata2) {
     if (automata1 && automata2) {
         agregarConexion(automata1, automata2);
-        agregarConexion(automata2, automata1);  // Conexión bidireccional
+        agregarConexion(automata2, automata1); 
     }
 }
 
+void desconectarAutomata(automataCelular* automata1, automataCelular* automata2) {
+    if (automata1 && automata2) {
+        eliminarConexiones(automata1, automata2);
+        eliminarConexiones(automata2, automata1); 
+    }
+}
 void agregarConexion(automataCelular* automata, automataCelular* conectado) {
+    if (automata == NULL || conectado == NULL) {
+        fprintf(stderr, "Error: automata o conectado es NULL.\n");
+        return;
+    }
+
     conexion* nuevaConexion = (conexion*)malloc(sizeof(conexion));
+    if (nuevaConexion == NULL) {
+        fprintf(stderr, "Error: no se pudo asignar memoria para nuevaConexion.\n");
+        return;
+    }
+
     nuevaConexion->conectado = conectado;
-    nuevaConexion->siguiente = automata->conexiones;
-    automata->conexiones = nuevaConexion;
+    nuevaConexion->siguiente = automataAsimetricoGlobal->conexiones;
+    automataAsimetricoGlobal->conexiones = nuevaConexion;
 }
 
-void eliminarConexiones(automataAsimetrico* automata) {
-    for (int i = 0; i < automata->filas; i++) {
-        for (int j = 0; j < automata->columnas; j++) {
-            automataCelular* subAutomata = &automata->automatas[i][j];
-            if (subAutomata->conexiones) {
-                conexion* actual = subAutomata->conexiones;
-                while (actual) {
-                    conexion* siguiente = actual->siguiente;
-                    free(actual);
-                    actual = siguiente;
-                }
-                subAutomata->conexiones = NULL;
+void eliminarConexiones(automataCelular* automata, automataCelular* conectado) {
+    conexion* actual = automataAsimetricoGlobal->conexiones;
+    conexion* previa = NULL;
+
+    while (actual != NULL) {
+        if (actual->conectado == conectado) {
+            if (previa == NULL) {
+                // La conexión a eliminar es la primera en la lista
+                automataAsimetricoGlobal->conexiones = actual->siguiente;
+            } else {
+                // La conexión a eliminar no es la primera
+                previa->siguiente = actual->siguiente;
             }
+            conexion* temp = actual;
+            actual = actual->siguiente;
+            free(temp);
+        } else {
+            previa = actual;
+            actual = actual->siguiente;
         }
     }
 }
 
-void imprimirAutomataAsimetrico1(automataAsimetrico* automata) {
-    for (int i = 0; i < automata->filas; i++) {
-        for (int j = 0; j < automata->columnas; j++) {
-            printf("[%s]", automata->automatas[i][j].color);
-            conexion* actual = automata->automatas[i][j].conexiones;
-            while (actual) {
-                printf(" -> Conectado a [%s]", actual->conectado->color);
-                actual = actual->siguiente;
-            }
-            printf("\t");
-        }
-        printf("\n");
-    }
-}
+
 
 
 void yyerror(const char* msg) {

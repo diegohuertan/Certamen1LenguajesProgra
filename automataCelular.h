@@ -23,13 +23,13 @@ typedef struct automataCelular {
     celula **celulas;
     int filas;
     int columnas;
-    conexion* conexiones; // Lista de conexiones
 } automataCelular;
 
 typedef struct automataAsimetrico {
     int filas;
     int columnas;
     automataCelular** automatas;
+    conexion* conexiones; // Lista de conexiones
 } automataAsimetrico;
 
 typedef struct listaAutomatas {
@@ -53,7 +53,7 @@ listaAutomatas* crearListaAutomatas(int capacidadInicial);
 void agregarAutomata(listaAutomatas* lista, automataCelular* automata);
 void conectarAutomatas(automataCelular* automata1, automataCelular* automata2);
 void agregarConexion(automataCelular* automata, automataCelular* conectado);
-void imprimirAutomataAsimetrico1(automataAsimetrico* automata);
-void eliminarConexiones(automataAsimetrico* automata);
+void desconectarAutomata(automataCelular* automata1, automataCelular* automata2);
+void eliminarConexiones(automataCelular* automata, automataCelular* conectado);
 
 #endif // AUTOMATA_CELULAR_H
