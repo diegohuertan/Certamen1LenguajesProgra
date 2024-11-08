@@ -4,7 +4,6 @@
 #define TAMAÑO_CELDA 10
 #define ESTADO_S 1
 
-// Definición de tipos (seir, celula, automataCelular)
 typedef struct seir {
     int estados[4];
 } seir;
@@ -29,7 +28,7 @@ typedef struct automataAsimetrico {
     int filas;
     int columnas;
     automataCelular** automatas;
-    conexion* conexiones; // Lista de conexiones
+    conexion* conexiones; 
 } automataAsimetrico;
 
 typedef struct listaAutomatas {
@@ -38,7 +37,6 @@ typedef struct listaAutomatas {
     int capacidad;
 } listaAutomatas;
 
-// Declaraciones de funciones
 automataCelular* crearAutomataSimetrico(char* color, int filas, int columnas, seir* estados);
 automataAsimetrico* crearAutomataAsimetrico(int filas, int columnas);
 void asignarAutomataSimetrico(automataAsimetrico* automata, int fila, int columna, automataCelular* simetrico);
@@ -48,11 +46,12 @@ void imprimirAutomata(automataCelular* automata);
 void imprimirAutomataAsimetrico(automataAsimetrico* automata);
 void imprimirVecindad(int vecindad[8][2]);
 void obtenerVecindadMoore(automataCelular* automata, int i, int j, int vecindad[8][2]);
-void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int columna);
+void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int columna, int pasos);
 listaAutomatas* crearListaAutomatas(int capacidadInicial);
 void agregarAutomata(listaAutomatas* lista, automataCelular* automata);
 void conectarAutomatas(automataCelular* automata1, automataCelular* automata2);
 void agregarConexion(automataCelular* automata, automataCelular* conectado);
 void eliminarConexiones();
+void exportarDatosSimulacionCSV(const char* nombreArchivo, int tiempo);
 
 #endif // AUTOMATA_CELULAR_H

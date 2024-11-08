@@ -10,9 +10,9 @@ extern FILE *yyin;
 
 
 // Declaración de constantes globales
-const double PROB_INFECCION = 0.8;   // Probabilidad de infección
-const double PROB_MORBILIDAD = 0.8;  // Probabilidad de morbilidad (E -> I)
-const double PROB_RECUPERACION = 0.8; // Probabilidad de recuperación (I -> R)
+const double prob_infeccion = 0.8;   // Probabilidad de infección
+const double prob_morbilidad = 0.8;  // Probabilidad de morbilidad (E -> I)
+const double prob_recuperacion = 0.2; // Probabilidad de recuperación (I -> R)
 const int POBLACION_MAXIMA = 100;
 
 // Declaraciones de funciones
@@ -90,21 +90,24 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
         imprimirVecindad(vecindad);
     }
     |
-    SIMULAR NUMERO{
-        for (int pasos=0; pasos <=$2; pasos++){
-        for (int act = 0; act < listaAutomatasGlobal->cantidad; act++) {
-            automataCelular* simetrico = listaAutomatasGlobal->automatas[act];
-                for (int i = 0; i < simetrico->filas; i++) {
-                    for (int j = 0; j < simetrico->columnas; j++) {
-                        actualizar_celda_con_vecinos(simetrico, i, j);
-                    }
-                }
+    SIMULAR NUMERO {
+        for (int pasos = 0; pasos <= $2; pasos++) {
+    // Procesar el automataAsimetrico completo antes de imprimir
+    for (int act = 0; act < listaAutomatasGlobal->cantidad; act++) {
+        automataCelular* simetrico = listaAutomatasGlobal->automatas[act];
+        for (int i = 0; i < simetrico->filas; i++) {
+            for (int j = 0; j < simetrico->columnas; j++) {
+                actualizar_celda_con_vecinos(simetrico, i, j,pasos);
             }
-            imprimirAutomataAsimetrico(automataAsimetricoGlobal);
-                 printf("Simulacion numero: %d \n",pasos);
-
         }
+    }
+    
+    // Después de actualizar, imprimir y exportar datos
+    imprimirAutomataAsimetrico(automataAsimetricoGlobal);
+    printf("Simulacion numero: %d \n", pasos);
 
+    
+}
     }
     |
     ASIMETRICO NUMERO NUMERO {
@@ -225,13 +228,13 @@ void imprimirAutomata(automataCelular* automata) {
     }
 }
 
-void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int columna) {
+void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int columna, int pasos, double prob_infeccion, double prob_morbilidad, double prob_recuperacion) {
     if (automata == NULL || automata->celulas == NULL) {
         fprintf(stderr, "Error: Automata o celulas no inicializadas.\n");
         return;
     }
 
-    if (fila < 0 || fila >= automata->filas || columna < 0 || fila >= automata->columnas) {
+    if (fila < 0 || fila >= automata->filas || columna < 0 || columna >= automata->columnas) {
         return;
     }
 
@@ -258,66 +261,60 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
         }
     }
 
-    // Acumular infectados de los autómatas vecinos conectados
-    conexion* actual = automataAsimetricoGlobal->conexiones;
-    
-    while (actual != NULL) {
-        automataCelular* automataVecino = actual->conectado;
-        if (automataVecino && automataVecino->celulas) {
-            I_vecinos += automataVecino->celulas[0][0].estado.estados[2]; // Ajusta el índice según sea necesario
-            vecinos_contados++;
-            
-        }
-        actual = actual->siguiente;
-    }
-
+    // Normalizar el promedio de infectados
     if (vecinos_contados > 0) {
         I_vecinos /= vecinos_contados;
     }
 
-    // Inicializar el generador de números aleatorios
-    srand(time(NULL));
+    // Definir umbrales para las transiciones de estado
+    double umbral_infeccion = prob_infeccion;  
+    double umbral_morbilidad = prob_morbilidad; 
+    double umbral_recuperacion = prob_recuperacion;
+    
+    // Inicializar una celda temporal para nuevos estados
+    double nuevo_Susceptible = Susceptible;
+    double nuevo_Expuesto = Expuesto;
+    double nuevo_Infectado = Infectado;
+    double nuevo_Recuperado = Recuperado;
 
-    // Cálculo de las probabilidades de cambio de estado
-    double prob_infeccion = PROB_INFECCION * I_vecinos;
-    double prob_morbilidad = PROB_MORBILIDAD * Expuesto;
-    double prob_recuperacion = PROB_RECUPERACION * Infectado;
-
-    // Actualizar los valores de la celda basados en probabilidades
-    if ((double)rand() / RAND_MAX < prob_infeccion && Susceptible > 0) {
-        Susceptible -= 1;
-        Expuesto += 1;
+    // Actualizar estados basados en umbrales
+    if (I_vecinos > umbral_infeccion && Susceptible > 0) {
+        nuevo_Susceptible -= 1;
+        nuevo_Expuesto += 1;
     }
-    if ((double)rand() / RAND_MAX < prob_morbilidad && Expuesto > 0) {
-        Expuesto -= 1;
-        Infectado += 1;
+    if (Expuesto > umbral_morbilidad && Expuesto > 0) {
+        nuevo_Expuesto -= 1;
+        nuevo_Infectado += 1;
     }
-    if ((double)rand() / RAND_MAX < prob_recuperacion && Infectado > 0) {
-        Infectado -= 1;
-        Recuperado += 1;
+    if (Infectado > umbral_recuperacion && Infectado > 0) {
+        nuevo_Infectado -= 1;
+        nuevo_Recuperado += 1;
     }
-
+    
     // Asegurarse de que no haya valores negativos
-    if (Susceptible < 0) Susceptible = 0;
-    if (Expuesto < 0) Expuesto = 0;
-    if (Infectado < 0) Infectado = 0;
-    if (Recuperado < 0) Recuperado = 0;
-
+    nuevo_Susceptible = (nuevo_Susceptible < 0) ? 0 : nuevo_Susceptible;
+    nuevo_Expuesto = (nuevo_Expuesto < 0) ? 0 : nuevo_Expuesto;
+    nuevo_Infectado = (nuevo_Infectado < 0) ? 0 : nuevo_Infectado;
+    nuevo_Recuperado = (nuevo_Recuperado < 0) ? 0 : nuevo_Recuperado;
+    
     // Asegurarse de que la población total no exceda la población máxima
-    double total_poblacion = Susceptible + Expuesto + Infectado + Recuperado;
+    double total_poblacion = nuevo_Susceptible + nuevo_Expuesto + nuevo_Infectado + nuevo_Recuperado;
     if (total_poblacion > poblacion_maxima) {
         double factor = poblacion_maxima / total_poblacion;
-        Susceptible *= factor;
-        Expuesto *= factor;
-        Infectado *= factor;
-        Recuperado *= factor;
+        nuevo_Susceptible *= factor;
+        nuevo_Expuesto *= factor;
+        nuevo_Infectado *= factor;
+        nuevo_Recuperado *= factor;
     }
-
+    
     // Actualizar los valores de la celda
-    celda->estado.estados[0] = Susceptible;
-    celda->estado.estados[1] = Expuesto;
-    celda->estado.estados[2] = Infectado;
-    celda->estado.estados[3] = Recuperado;
+    celda->estado.estados[0] = nuevo_Susceptible;
+    celda->estado.estados[1] = nuevo_Expuesto;
+    celda->estado.estados[2] = nuevo_Infectado;
+    celda->estado.estados[3] = nuevo_Recuperado;
+
+    // Exportar datos de la simulación
+    exportarDatosSimulacionCSV("datos_simulacion.csv", pasos);
 }
 
 automataAsimetrico* crearAutomataAsimetrico(int filas, int columnas) {
@@ -500,6 +497,40 @@ void agregarConexion(automataCelular* automata, automataCelular* conectado) {
 
 void eliminarConexiones() {
 automataAsimetricoGlobal->conexiones = NULL;
+}
+void exportarDatosSimulacionCSV(const char* nombreArchivo, int tiempo) {
+    FILE* archivo = fopen(nombreArchivo, "a"); // Abrir en modo de adición para agregar datos
+    if (!archivo) {
+        fprintf(stderr, "Error al abrir el archivo para escribir.\n");
+        return;
+    }
+
+    // Escribir encabezados en el archivo si está vacío
+    fseek(archivo, 0, SEEK_END);
+    if (ftell(archivo) == 0) {
+        fprintf(archivo, "Automata,Fila,Columna,Susceptible,Expuesto,Infectado,Recuperado,Tiempo\n");
+    }
+
+    // Recorrer cada autómata en la lista global
+    for (int a = 0; a < listaAutomatasGlobal->cantidad; a++) {
+        automataCelular* automata = listaAutomatasGlobal->automatas[a];
+
+        for (int i = 0; i < automata->filas; i++) {
+            for (int j = 0; j < automata->columnas; j++) {
+                // Obtener los valores SEIR de la celda actual
+                seir estado = automata->celulas[i][j].estado;
+                
+                // Escribir datos de la celda en el archivo CSV
+                fprintf(archivo, "%d,%d,%d,%d,%d,%d,%d,%d\n", 
+                        a, i, j, 
+                        estado.estados[0], estado.estados[1], estado.estados[2], estado.estados[3],
+                        tiempo);
+            }
+        }
+    }
+
+    fclose(archivo);
+    printf("Datos de la simulación exportados exitosamente a %s.\n", nombreArchivo);
 }
 
 void yyerror(const char* msg) {

@@ -1,11 +1,11 @@
-crear automata simetrico amarillo 2 2 s100 e0 i0 r0 s100 e0 i0 r0 s100 e0 i0 r0 s100 e0 i0 r0
-crear automata simetrico salmon 2 1 s50 e0 i50 r0 s50 e0 i50 r0
-crear automata simetrico azul 3 2 s98 e1 i1 r0 s98 e1 i1 r0 s98 e1 i1 r0 s98 e1 i1 r0 s98 e1 i1 r0 s98 e1 i1 r0
-crear automata simetrico verde 2 2 s98 e1 i1 r0 s98 e1 i1 r0 s98 e1 i1 r0 s98 e1 i1 r0
-crear automata simetrico rojo 2 1 s98 e1 i1 r0 s90 e5 i5 r0 
-crear automata simetrico celeste 1 2 s98 e1 i1 r0 s90 e5 i5 r0 
-crear automata simetrico gris 4 2 s98 e1 i1 r0 s98 e1 i1 r0 s98 e1 i1 r0 s98 e1 i1 r0 s98 e1 i1 r0 s98 e1 i1 r0 s98 e1 i1 r0 s98 e1 i1 r0
-crear automata simetrico morado 1 1 s98 e1 i1 r0
+crear automata simetrico amarillo 2 2 s50 e20 i30 r0 s50 e20 i30 r0 s50 e20 i30 r0 s50 e20 i30 r0
+crear automata simetrico salmon 2 1 s30 e20 i50 r0 s30 e20 i50 r0
+crear automata simetrico azul 3 2 s20 e50 i30 r0 s20 e50 i30 r0 s20 e50 i30 r0 s20 e50 i30 r0 s20 e50 i30 r0 s20 e50 i30 r0
+crear automata simetrico verde 2 2 s20 e50 i30 r0 s20 e50 i30 r0 s20 e50 i30 r0 s20 e50 i30 r0
+crear automata simetrico rojo 2 1 s20 e50 i30 r0 s90 e5 i5 r0 
+crear automata simetrico celeste 1 2 s20 e50 i30 r0 s90 e5 i5 r0 
+crear automata simetrico gris 4 2 s20 e50 i30 r0 s20 e50 i30 r0 s20 e50 i30 r0 s20 e50 i30 r0 s20 e50 i30 r0 s20 e50 i30 r0 s20 e50 i30 r0 s20 e50 i30 r0
+crear automata simetrico morado 1 1 s20 e50 i30 r0
 
 asimetrico 7 8
 asignar 0 1 0
