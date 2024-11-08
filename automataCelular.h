@@ -46,7 +46,7 @@ void imprimirAutomata(automataCelular* automata);
 void imprimirAutomataAsimetrico(automataAsimetrico* automata);
 void imprimirVecindad(int vecindad[8][2]);
 void obtenerVecindadMoore(automataCelular* automata, int i, int j, int vecindad[8][2]);
-void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int columna, int pasos);
+void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int columna, int pasos, double prob_infeccion,double prob_morbilidad, double prob_recuperacion);
 listaAutomatas* crearListaAutomatas(int capacidadInicial);
 void agregarAutomata(listaAutomatas* lista, automataCelular* automata);
 void conectarAutomatas(automataCelular* automata1, automataCelular* automata2);

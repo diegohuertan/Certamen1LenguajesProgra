@@ -14,7 +14,7 @@ int** convertirCadenaASubarrays(char* cadena, int* longitud);
 %%
 
 [0-9]+       { yylval.ival = atoi(yytext); return NUMERO; }
-[0-9]+[.][0-9]+ { yylval.fval = atof(yytext); return NUMERO; }
+[0-9]+[.][0-9]+ { yylval.fval = atof(yytext); return FLOAT; }
 "vecindad" { return VECINDAD; }
 "crear automata simetrico" { return CREARAUTOMATA; }
 "conectar" { return CONECTAR;}

@@ -8,32 +8,30 @@
 #include <stdbool.h>
 extern FILE *yyin;
 
-
-// Declaración de constantes globales
-const double prob_infeccion = 0.8;   // Probabilidad de infección
-const double prob_morbilidad = 0.8;  // Probabilidad de morbilidad (E -> I)
-const double prob_recuperacion = 0.2; // Probabilidad de recuperación (I -> R)
+// Definiciones de constantes
 const int POBLACION_MAXIMA = 100;
 
 // Declaraciones de funciones
 int yylex();
 void yyerror(const char*);
 automataCelular* automata;
-seir* convertirSubarraysASeir(int** subarrays, int length); // Declaración de la función
+seir* convertirSubarraysASeir(int** subarrays, int length);
 listaAutomatas* listaAutomatasGlobal;
 automataAsimetrico* automataAsimetricoGlobal;
 %}
 
 %union {
     int ival;
+    double fval;
     char* strval;
-    int** subarraylist;  // Para almacenar una lista de subarrays
+    int** subarraylist; 
 }
 
 /* Definiciones de tokens */
 %type <subarraylist> celulas
 %token<strval> CREARAUTOMATA DEFAULT S E I R COLOR VECINDAD SIMULAR ASIMETRICO ASIGNAR CONECTAR AISLAR IMPRIMIR CONEXIONES
 %token<ival> NUMERO
+%token<fval> FLOAT
 %token<subarraylist> ESTADOSSEIR
 %token ENDLINE
 
@@ -90,14 +88,14 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
         imprimirVecindad(vecindad);
     }
     |
-    SIMULAR NUMERO {
+    SIMULAR NUMERO FLOAT FLOAT FLOAT{
         for (int pasos = 0; pasos <= $2; pasos++) {
     // Procesar el automataAsimetrico completo antes de imprimir
     for (int act = 0; act < listaAutomatasGlobal->cantidad; act++) {
         automataCelular* simetrico = listaAutomatasGlobal->automatas[act];
         for (int i = 0; i < simetrico->filas; i++) {
             for (int j = 0; j < simetrico->columnas; j++) {
-                actualizar_celda_con_vecinos(simetrico, i, j,pasos);
+                actualizar_celda_con_vecinos(simetrico, i, j,pasos, $3, $4, $5);
             }
         }
     }
