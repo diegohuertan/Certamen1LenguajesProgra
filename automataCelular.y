@@ -88,25 +88,55 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
         imprimirVecindad(vecindad);
     }
     |
-    SIMULAR NUMERO FLOAT FLOAT FLOAT{
-        for (int pasos = 0; pasos <= $2; pasos++) {
-    // Procesar el automataAsimetrico completo antes de imprimir
-    for (int act = 0; act < listaAutomatasGlobal->cantidad; act++) {
-        automataCelular* simetrico = listaAutomatasGlobal->automatas[act];
-        for (int i = 0; i < simetrico->filas; i++) {
-            for (int j = 0; j < simetrico->columnas; j++) {
-                actualizar_celda_con_vecinos(simetrico, i, j,pasos, $3, $4, $5);
+SIMULAR NUMERO FLOAT FLOAT FLOAT {
+    for (int pasos = 0; pasos <= $2; pasos++) {
+        // Procesar el automataAsimetrico completo antes de imprimir
+        for (int act = 0; act < listaAutomatasGlobal->cantidad; act++) {
+            automataCelular* simetrico = listaAutomatasGlobal->automatas[act];
+            
+            // Crear una matriz temporal para almacenar los nuevos estados
+            celula** temp_celulas = malloc(simetrico->filas * sizeof(celula*));
+            for (int i = 0; i < simetrico->filas; i++) {
+                temp_celulas[i] = malloc(simetrico->columnas * sizeof(celula));
+                // Copiar estados actuales a la matriz temporal
+                for (int j = 0; j < simetrico->columnas; j++) {
+                    temp_celulas[i][j] = simetrico->celulas[i][j];
+                }
             }
+            
+            // Calcular los nuevos estados usando la matriz temporal
+            for (int i = 0; i < simetrico->filas; i++) {
+                for (int j = 0; j < simetrico->columnas; j++) {
+                    // Guardar el autómata original
+                    celula** celulas_original = simetrico->celulas;
+                    // Asignar la matriz temporal
+                    simetrico->celulas = temp_celulas;
+                    // Calcular nuevos estados
+                    actualizar_celda_con_vecinos(simetrico, i, j, pasos, $3, $4, $5);
+                    // Restaurar el autómata original
+                    simetrico->celulas = celulas_original;
+                }
+            }
+            
+            // Copiar los nuevos estados de vuelta al autómata original
+            for (int i = 0; i < simetrico->filas; i++) {
+                for (int j = 0; j < simetrico->columnas; j++) {
+                    simetrico->celulas[i][j] = temp_celulas[i][j];
+                }
+            }
+            
+            // Liberar la memoria de la matriz temporal
+            for (int i = 0; i < simetrico->filas; i++) {
+                free(temp_celulas[i]);
+            }
+            free(temp_celulas);
         }
-    }
-    
-    // Después de actualizar, imprimir y exportar datos
-    imprimirAutomataAsimetrico(automataAsimetricoGlobal);
-    printf("Simulacion numero: %d \n", pasos);
+        
+        imprimirAutomataAsimetrico(automataAsimetricoGlobal);
 
-    
-}
+        printf("Simulacion numero: %d \n", pasos);
     }
+}
     |
     ASIMETRICO NUMERO NUMERO {
         automataAsimetricoGlobal = crearAutomataAsimetrico($2, $3);
@@ -274,21 +304,27 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
     double nuevo_Expuesto = Expuesto;
     double nuevo_Infectado = Infectado;
     double nuevo_Recuperado = Recuperado;
+    
 
-    // Actualizar estados basados en umbrales
-    if (I_vecinos > umbral_infeccion && Susceptible > 0) {
+    if ((double)rand() / RAND_MAX < umbral_infeccion && Susceptible > 0) {
         nuevo_Susceptible -= 1;
         nuevo_Expuesto += 1;
     }
-    if (Expuesto > umbral_morbilidad && Expuesto > 0) {
+
+    // E -> I
+    if ((double)rand() / RAND_MAX < umbral_morbilidad && Expuesto > 0) {
         nuevo_Expuesto -= 1;
         nuevo_Infectado += 1;
     }
-    if (Infectado > umbral_recuperacion && Infectado > 0) {
+
+    // I -> R
+    if ((double)rand() / RAND_MAX < umbral_recuperacion && Infectado > 0) {
         nuevo_Infectado -= 1;
         nuevo_Recuperado += 1;
     }
     
+    
+
     // Asegurarse de que no haya valores negativos
     nuevo_Susceptible = (nuevo_Susceptible < 0) ? 0 : nuevo_Susceptible;
     nuevo_Expuesto = (nuevo_Expuesto < 0) ? 0 : nuevo_Expuesto;
