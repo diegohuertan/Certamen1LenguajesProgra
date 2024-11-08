@@ -78,7 +78,7 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
     
     agregarAutomata(listaAutomatasGlobal, automata);
     
-    free(listaseir); // Liberar la memoria después de usar listaseir
+    free(listaseir); 
 }
 
     |
@@ -90,42 +90,32 @@ funcion: CREARAUTOMATA COLOR NUMERO NUMERO celulas {
     |
 SIMULAR NUMERO FLOAT FLOAT FLOAT {
     for (int pasos = 0; pasos <= $2; pasos++) {
-        // Procesar el automataAsimetrico completo antes de imprimir
         for (int act = 0; act < listaAutomatasGlobal->cantidad; act++) {
             automataCelular* simetrico = listaAutomatasGlobal->automatas[act];
             
-            // Crear una matriz temporal para almacenar los nuevos estados
             celula** temp_celulas = malloc(simetrico->filas * sizeof(celula*));
             for (int i = 0; i < simetrico->filas; i++) {
                 temp_celulas[i] = malloc(simetrico->columnas * sizeof(celula));
-                // Copiar estados actuales a la matriz temporal
                 for (int j = 0; j < simetrico->columnas; j++) {
                     temp_celulas[i][j] = simetrico->celulas[i][j];
                 }
             }
             
-            // Calcular los nuevos estados usando la matriz temporal
             for (int i = 0; i < simetrico->filas; i++) {
                 for (int j = 0; j < simetrico->columnas; j++) {
-                    // Guardar el autómata original
                     celula** celulas_original = simetrico->celulas;
-                    // Asignar la matriz temporal
                     simetrico->celulas = temp_celulas;
-                    // Calcular nuevos estados
                     actualizar_celda_con_vecinos(simetrico, i, j, pasos, $3, $4, $5);
-                    // Restaurar el autómata original
                     simetrico->celulas = celulas_original;
                 }
             }
             
-            // Copiar los nuevos estados de vuelta al autómata original
             for (int i = 0; i < simetrico->filas; i++) {
                 for (int j = 0; j < simetrico->columnas; j++) {
                     simetrico->celulas[i][j] = temp_celulas[i][j];
                 }
             }
             
-            // Liberar la memoria de la matriz temporal
             for (int i = 0; i < simetrico->filas; i++) {
                 free(temp_celulas[i]);
             }
@@ -161,11 +151,11 @@ SIMULAR NUMERO FLOAT FLOAT FLOAT {
     ;
 celulas:
     ESTADOSSEIR {
-        $$ = $1;  // Asigna el valor del subarray a $$ para que esté disponible
+        $$ = $1;  
         
     }
     | ENDLINE {
-        $$ = NULL;  // También asigna NULL en este caso para el retorno
+        $$ = NULL;  
     }
     ;
 conectar:
@@ -195,7 +185,6 @@ automataCelular* crearAutomataSimetrico(char* color, int filas, int columnas, se
     for (int i = 0; i < filas; i++) {
         automata->celulas[i] = (celula*)malloc(columnas * sizeof(celula));
         for (int j = 0; j < columnas; j++) {
-            // Asigna un estado de la lista a cada celda
             automata->celulas[i][j].estado = estados[estado_index++];
         }
     }
@@ -212,22 +201,18 @@ seir crearSeir(int s, int e, int i, int r) {
 }
 
 void obtenerVecindadMoore(automataCelular* automata, int i, int j, int vecindad[8][2]) {
-    // Definir desplazamientos de Moore
     int dx[] = {-1, -1, -1, 0, 0, 1, 1, 1};
     int dy[] = {-1, 0, 1, -1, 1, -1, 0, 1};
     int k = 0;
 
-    // Iterar sobre los 8 vecinos
     for (int d = 0; d < 8; d++) {
-        int ni = i + dx[d]; // Nueva fila
-        int nj = j + dy[d]; // Nueva columna
+        int ni = i + dx[d]; 
+        int nj = j + dy[d]; 
 
-        // Verificar si está dentro de los límites del autómata
         if (ni >= 0 && ni < automata->filas && nj >= 0 && nj < automata->columnas) {
             vecindad[k][0] = ni;
             vecindad[k][1] = nj;
         } else {
-            // Si el vecino está fuera de los límites, poner -1 para indicar que no es válido
             vecindad[k][0] = -1;
             vecindad[k][1] = -1;
         }
@@ -247,7 +232,6 @@ void imprimirAutomata(automataCelular* automata) {
         return;
     }
 
-    // Imprimir matriz y contenido del automata simetrico
     for (int i = 0; i < automata->filas; i++) {
         for (int j = 0; j < automata->columnas; j++) {
             printf(" (%2d,%2d,%2d,%2d) ", automata->celulas[i][j].estado.estados[0], automata->celulas[i][j].estado.estados[1], automata->celulas[i][j].estado.estados[2], automata->celulas[i][j].estado.estados[3]);
@@ -274,7 +258,6 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
     double Recuperado = celda->estado.estados[3];
     double poblacion_maxima = POBLACION_MAXIMA;
 
-    // Acumular infectados de los vecinos (Vecindad de Moore)
     double I_vecinos = 0;
     int vecinos_contados = 0;
     int vecindad[8][2];
@@ -294,25 +277,22 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
     while (actual != NULL) {
         automataCelular* automataVecino = actual->conectado;
         if (automataVecino && automataVecino->celulas) {
-            I_vecinos += automataVecino->celulas[0][0].estado.estados[2]; // Ajusta el índice según sea necesario
+            I_vecinos += automataVecino->celulas[0][0].estado.estados[2]; 
             vecinos_contados++;
         }
         actual = actual->siguiente;
     }
 
-    // Normalizar el promedio de infectados
     double infeccionVecinos = 0;
 
     if (vecinos_contados > 0) {
         infeccionVecinos =(I_vecinos / vecinos_contados)/100;
     }
 
-    // Definir umbrales para las transiciones de estado
     double umbral_infeccion = prob_infeccion;  
     double umbral_morbilidad = prob_morbilidad; 
     double umbral_recuperacion = prob_recuperacion;
     
-    // Inicializar una celda temporal para nuevos estados
     double nuevo_Susceptible = Susceptible;
     double nuevo_Expuesto = Expuesto;
     double nuevo_Infectado = Infectado;
@@ -324,13 +304,11 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
         nuevo_Expuesto += 1;
     }
 
-    // E -> I
     if ((double)rand() / RAND_MAX < umbral_morbilidad && Expuesto > 0) {
         nuevo_Expuesto -= 1;
         nuevo_Infectado += 1;
     }
 
-    // I -> R
     if ((double)rand() / RAND_MAX < umbral_recuperacion && Infectado > 0) {
         nuevo_Infectado -= 1;
         nuevo_Recuperado += 1;
@@ -338,13 +316,11 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
     
     
 
-    // Asegurarse de que no haya valores negativos
     nuevo_Susceptible = (nuevo_Susceptible < 0) ? 0 : nuevo_Susceptible;
     nuevo_Expuesto = (nuevo_Expuesto < 0) ? 0 : nuevo_Expuesto;
     nuevo_Infectado = (nuevo_Infectado < 0) ? 0 : nuevo_Infectado;
     nuevo_Recuperado = (nuevo_Recuperado < 0) ? 0 : nuevo_Recuperado;
     
-    // Asegurarse de que la población total no exceda la población máxima
     double total_poblacion = nuevo_Susceptible + nuevo_Expuesto + nuevo_Infectado + nuevo_Recuperado;
     if (total_poblacion > poblacion_maxima) {
         double factor = poblacion_maxima / total_poblacion;
@@ -354,13 +330,11 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
         nuevo_Recuperado *= factor;
     }
     
-    // Actualizar los valores de la celda
     celda->estado.estados[0] = nuevo_Susceptible;
     celda->estado.estados[1] = nuevo_Expuesto;
     celda->estado.estados[2] = nuevo_Infectado;
     celda->estado.estados[3] = nuevo_Recuperado;
 
-    // Exportar datos de la simulación
     exportarDatosSimulacionCSV("datos_simulacion.csv", pasos);
 }
 
@@ -380,7 +354,6 @@ automataAsimetrico* crearAutomataAsimetrico(int filas, int columnas) {
             exit(EXIT_FAILURE);
         }
         for (int j = 0; j < columnas; j++) {
-            // Inicializar cada celda como un autómata vacío
             strcpy(automata->automatas[i][j].color, "vacio");
             automata->automatas[i][j].filas = 0;
             automata->automatas[i][j].columnas = 0;
@@ -436,22 +409,18 @@ void agregarAutomata(listaAutomatas* lista, automataCelular* automata) {
 void imprimirAutomataAsimetrico(automataAsimetrico* automata) {
     printf("\n=== Autómata Asimétrico %dx%d ===\n\n", automata->filas, automata->columnas);
     
-    // Para cada fila del autómata principal
     for (int i = 0; i < automata->filas; i++) {
         int maxSubFilas = 0;
         int* anchoSubmatrices = malloc(automata->columnas * sizeof(int));
         
-        // Calcular el ancho estándar para todas las submatrices
-        int anchoEstandar = 30; // Ancho mínimo para mantener consistencia
+        int anchoEstandar = 30; 
         
-        // Calcular la altura máxima y anchos
         for (int j = 0; j < automata->columnas; j++) {
             automataCelular* subAutomata = &automata->automatas[i][j];
             if (subAutomata->celulas != NULL) {
                 if (subAutomata->filas > maxSubFilas) {
                     maxSubFilas = subAutomata->filas;
                 }
-                // Calcular el ancho necesario para esta submatriz
                 int anchoNecesario = subAutomata->columnas * 14;
                 anchoSubmatrices[j] = anchoNecesario > anchoEstandar ? anchoNecesario : anchoEstandar;
             } else {
@@ -459,10 +428,8 @@ void imprimirAutomataAsimetrico(automataAsimetrico* automata) {
             }
         }
         
-        // Si no hay submatrices con contenido, asegurar altura mínima
         if (maxSubFilas == 0) maxSubFilas = 1;
         
-        // Línea superior de la fila actual
         for (int j = 0; j < automata->columnas; j++) {
             printf("┌");
             for (int k = 0; k < anchoSubmatrices[j]; k++) printf("─");
@@ -470,18 +437,15 @@ void imprimirAutomataAsimetrico(automataAsimetrico* automata) {
         }
         printf("\n");
         
-        // Imprimir el contenido de las submatrices
         for (int subFila = 0; subFila < maxSubFilas; subFila++) {
             for (int j = 0; j < automata->columnas; j++) {
                 automataCelular* subAutomata = &automata->automatas[i][j];
                 printf("│");
                 
                 if (subAutomata->celulas != NULL && subFila < subAutomata->filas) {
-                    // Calcular espaciado inicial para centrar
                     int espacioInicial = (anchoSubmatrices[j] - (subAutomata->columnas * 14)) / 2;
                     for (int s = 0; s < espacioInicial; s++) printf(" ");
                     
-                    // Imprimir los estados
                     for (int l = 0; l < subAutomata->columnas; l++) {
                         printf("(%2d,%2d,%2d,%2d) ", 
                             subAutomata->celulas[subFila][l].estado.estados[0],
@@ -490,11 +454,9 @@ void imprimirAutomataAsimetrico(automataAsimetrico* automata) {
                             subAutomata->celulas[subFila][l].estado.estados[3]);
                     }
                     
-                    // Espaciado final para centrar
                     int espacioFinal = anchoSubmatrices[j] - espacioInicial - (subAutomata->columnas * 14);
                     for (int s = 0; s < espacioFinal; s++) printf(" ");
                 } else {
-                    // Centrar [vacío] en el espacio disponible
                     int espacios = (anchoSubmatrices[j] - 8) / 2;
                     for (int s = 0; s < espacios; s++) printf(" ");
                     printf("[vacío]");
@@ -505,7 +467,6 @@ void imprimirAutomataAsimetrico(automataAsimetrico* automata) {
             printf("\n");
         }
         
-        // Línea inferior de la fila actual
         for (int j = 0; j < automata->columnas; j++) {
             printf("└");
             for (int k = 0; k < anchoSubmatrices[j]; k++) printf("─");
@@ -546,28 +507,24 @@ void eliminarConexiones() {
 automataAsimetricoGlobal->conexiones = NULL;
 }
 void exportarDatosSimulacionCSV(const char* nombreArchivo, int tiempo) {
-    FILE* archivo = fopen(nombreArchivo, "a"); // Abrir en modo de adición para agregar datos
+    FILE* archivo = fopen(nombreArchivo, "a"); 
     if (!archivo) {
         fprintf(stderr, "Error al abrir el archivo para escribir.\n");
         return;
     }
 
-    // Escribir encabezados en el archivo si está vacío
     fseek(archivo, 0, SEEK_END);
     if (ftell(archivo) == 0) {
         fprintf(archivo, "Automata,Fila,Columna,Susceptible,Expuesto,Infectado,Recuperado,Tiempo\n");
     }
 
-    // Recorrer cada autómata en la lista global
     for (int a = 0; a < listaAutomatasGlobal->cantidad; a++) {
         automataCelular* automata = listaAutomatasGlobal->automatas[a];
 
         for (int i = 0; i < automata->filas; i++) {
             for (int j = 0; j < automata->columnas; j++) {
-                // Obtener los valores SEIR de la celda actual
                 seir estado = automata->celulas[i][j].estado;
                 
-                // Escribir datos de la celda en el archivo CSV
                 fprintf(archivo, "%d,%d,%d,%d,%d,%d,%d,%d\n", 
                         a, i, j, 
                         estado.estados[0], estado.estados[1], estado.estados[2], estado.estados[3],
@@ -585,14 +542,12 @@ void yyerror(const char* msg) {
 }
 
 int main(int argc, char **argv) {
-    // Intentar abrir el archivo de comandos predeterminado
     yyin = fopen("automata.txt", "r");
     if (yyin) {
         yyparse();
-        fclose(yyin);  // Cierra el archivo después de procesarlo
+        fclose(yyin);  
     }
 
-    // Cambiar la entrada a stdin para continuar leyendo instrucciones
     yyin = stdin;
     yyparse();
 
