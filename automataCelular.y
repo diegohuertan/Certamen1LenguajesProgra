@@ -289,9 +289,22 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
         }
     }
 
+    conexion* actual = automataAsimetricoGlobal->conexiones;
+
+    while (actual != NULL) {
+        automataCelular* automataVecino = actual->conectado;
+        if (automataVecino && automataVecino->celulas) {
+            I_vecinos += automataVecino->celulas[0][0].estado.estados[2]; // Ajusta el índice según sea necesario
+            vecinos_contados++;
+        }
+        actual = actual->siguiente;
+    }
+
     // Normalizar el promedio de infectados
+    double infeccionVecinos = 0;
+
     if (vecinos_contados > 0) {
-        I_vecinos /= vecinos_contados;
+        infeccionVecinos =(I_vecinos / vecinos_contados)/100;
     }
 
     // Definir umbrales para las transiciones de estado
@@ -306,7 +319,7 @@ void actualizar_celda_con_vecinos(automataCelular* automata, int fila, int colum
     double nuevo_Recuperado = Recuperado;
     
 
-    if ((double)rand() / RAND_MAX < umbral_infeccion && Susceptible > 0) {
+    if ((double)rand() / RAND_MAX < umbral_infeccion + infeccionVecinos && Susceptible > 0) {
         nuevo_Susceptible -= 1;
         nuevo_Expuesto += 1;
     }
